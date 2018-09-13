@@ -1748,7 +1748,7 @@ Create React App doesn’t include any tools for this by default, but you can ea
 
 ![Storybook for React Demo](http://i.imgur.com/7CIAWpB.gif)
 
-You can also deploy your Storybook or style guide as a static app. This way, everyone in your team can view and review different states of UI components without starting a backend server or creating an account in your app.
+You can also client your Storybook or style guide as a static app. This way, everyone in your team can view and review different states of UI components without starting a backend server or creating an account in your app.
 
 ### Getting Started with Storybook
 
@@ -1831,7 +1831,7 @@ Progressive Web Apps are faster and more reliable than traditional web pages, an
 The [`sw-precache-webpack-plugin`](https://github.com/goldhand/sw-precache-webpack-plugin)
 is integrated into production configuration,
 and it will take care of generating a service worker file that will automatically
-precache all of your local assets and keep them up to date as you deploy updates.
+precache all of your local assets and keep them up to date as you client updates.
 The service worker will use a [cache-first strategy](https://developers.google.com/web/fundamentals/instant-and-offline/offline-cookbook/#cache-falling-back-to-network)
 for handling all requests for local assets, including the initial HTML, ensuring
 that your web app is reliably fast, even on a slow or unreliable network.
@@ -2086,7 +2086,7 @@ This will make sure that all the asset paths are relative to `index.html`. You w
 
 ### [Azure](https://azure.microsoft.com/)
 
-See [this](https://medium.com/@to_pe/deploying-create-react-app-on-microsoft-azure-c0f6686a4321) blog post on how to deploy your React app to Microsoft Azure.
+See [this](https://medium.com/@to_pe/deploying-create-react-app-on-microsoft-azure-c0f6686a4321) blog post on how to client your React app to Microsoft Azure.
 
 See [this](https://medium.com/@strid/host-create-react-app-on-azure-986bc40d5bf2#.pycfnafbg) blog post or [this](https://github.com/ulrikaugustsson/azure-appservice-static) repo for a way to use automatic deployment to Azure App Service.
 
@@ -2094,7 +2094,7 @@ See [this](https://medium.com/@strid/host-create-react-app-on-azure-986bc40d5bf2
 
 Install the Firebase CLI if you haven’t already by running `npm install -g firebase-tools`. Sign up for a [Firebase account](https://console.firebase.google.com/) and create a new project. Run `firebase login` and login with your previous created Firebase account.
 
-Then run the `firebase init` command from your project’s root. You need to choose the **Hosting: Configure and deploy Firebase Hosting sites** and choose the Firebase project you created in the previous step. You will need to agree with `database.rules.json` being created, choose `build` as the public directory, and also agree to **Configure as a single-page app** by replying with `y`.
+Then run the `firebase init` command from your project’s root. You need to choose the **Hosting: Configure and client Firebase Hosting sites** and choose the Firebase project you created in the previous step. You will need to agree with `database.rules.json` being created, choose `build` as the public directory, and also agree to **Configure as a single-page app** by replying with `y`.
 
 ```sh
     === Project Setup
@@ -2113,12 +2113,12 @@ Then run the `firebase init` command from your project’s root. You need to cho
     ? What file should be used for Database Rules? database.rules.json
     ✔  Database Rules for example-app-fd690 have been downloaded to database.rules.json.
     Future modifications to database.rules.json will update Database Rules when you run
-    firebase deploy.
+    firebase client.
 
     === Hosting Setup
 
     Your public directory is the folder (relative to your project directory) that
-    will contain Hosting assets to uploaded with firebase deploy. If you
+    will contain Hosting assets to uploaded with firebase client. If you
     have a build process for your assets, use your build's output directory.
 
     ? What do you want to use as your public directory? build
@@ -2143,13 +2143,13 @@ IMPORTANT: you need to set proper HTTP caching headers for `service-worker.js` f
     ...
 ```
 
-Now, after you create a production build with `npm run build`, you can deploy it by running `firebase deploy`.
+Now, after you create a production build with `npm run build`, you can client it by running `firebase client`.
 
 ```sh
     === Deploying to 'example-app-fd690'...
 
     i  deploying database, hosting
-    ✔  database: rules ready to deploy.
+    ✔  database: rules ready to client.
     i  hosting: preparing build directory for upload...
     Uploading: [==============================          ] 75%✔  hosting: build folder uploaded successfully
     ✔  hosting: 8 files uploaded successfully
@@ -2170,7 +2170,7 @@ For more information see [Add Firebase to your JavaScript Project](https://fireb
 #### Step 1: Add `homepage` to `package.json`
 
 **The step below is important!**<br>
-**If you skip it, your app will not deploy correctly.**
+**If you skip it, your app will not client correctly.**
 
 Open your `package.json` and add a `homepage` field for your project:
 
@@ -2186,9 +2186,9 @@ or for a GitHub user page:
 
 Create React App uses the `homepage` field to determine the root URL in the built HTML file.
 
-#### Step 2: Install `gh-pages` and add `deploy` to `scripts` in `package.json`
+#### Step 2: Install `gh-pages` and add `client` to `scripts` in `package.json`
 
-Now, whenever you run `npm run build`, you will see a cheat sheet with instructions on how to deploy to GitHub Pages.
+Now, whenever you run `npm run build`, you will see a cheat sheet with instructions on how to client to GitHub Pages.
 
 To publish it at [https://myusername.github.io/my-app](https://myusername.github.io/my-app), run:
 
@@ -2207,12 +2207,12 @@ Add the following scripts in your `package.json`:
 ```diff
   "scripts": {
 +   "predeploy": "npm run build",
-+   "deploy": "gh-pages -d build",
++   "client": "gh-pages -d build",
     "start": "react-scripts start",
     "build": "react-scripts build",
 ```
 
-The `predeploy` script will run automatically before `deploy` is run.
+The `predeploy` script will run automatically before `client` is run.
 
 If you are deploying to a GitHub user page instead of a project page you'll need to make two
 additional modifications:
@@ -2222,16 +2222,16 @@ additional modifications:
 ```diff
   "scripts": {
     "predeploy": "npm run build",
--   "deploy": "gh-pages -d build",
-+   "deploy": "gh-pages -b master -d build",
+-   "client": "gh-pages -d build",
++   "client": "gh-pages -b master -d build",
 ```
 
-#### Step 3: Deploy the site by running `npm run deploy`
+#### Step 3: Deploy the site by running `npm run client`
 
 Then run:
 
 ```sh
-npm run deploy
+npm run client
 ```
 
 #### Step 4: Ensure your project’s settings use `gh-pages`
@@ -2259,7 +2259,7 @@ If, when deploying, you get `/dev/tty: No such a device or address` or a similar
 
 1. Create a new [Personal Access Token](https://github.com/settings/tokens)
 2. `git remote set-url origin https://<user>:<token>@github.com/<user>/<repo>` .
-3. Try `npm run deploy again`
+3. Try `npm run client again`
 
 ### [Heroku](https://www.heroku.com/)
 
@@ -2268,7 +2268,7 @@ You can find instructions in [Deploying React with Zero Configuration](https://b
 
 #### Resolving Heroku Deployment Errors
 
-Sometimes `npm run build` works locally but fails during deploy via Heroku. Following are the most common cases.
+Sometimes `npm run build` works locally but fails during client via Heroku. Following are the most common cases.
 
 ##### "Module not found: Error: Cannot resolve 'file' or 'directory'"
 
@@ -2301,18 +2301,18 @@ In this case, ensure that the file is there with the proper lettercase and that�
 
 ### [Netlify](https://www.netlify.com/)
 
-**To do a manual deploy to Netlify’s CDN:**
+**To do a manual client to Netlify’s CDN:**
 
 ```sh
 npm install netlify-cli -g
-netlify deploy
+netlify client
 ```
 
-Choose `build` as the path to deploy.
+Choose `build` as the path to client.
 
 **To setup continuous delivery:**
 
-With this setup Netlify will build and deploy when you push to git or open a pull request:
+With this setup Netlify will build and client when you push to git or open a pull request:
 
 1. [Start a new netlify project](https://app.netlify.com/signup)
 2. Pick your Git hosting service and select your repository
@@ -2331,7 +2331,7 @@ When you build the project, Create React App will place the `public` folder cont
 
 ### [Now](https://zeit.co/now)
 
-Now offers a zero-configuration single-command deployment. You can use `now` to deploy your app for free.
+Now offers a zero-configuration single-command deployment. You can use `now` to client your app for free.
 
 1. Install the `now` command-line tool either via the recommended [desktop tool](https://zeit.co/download) or via node with `npm install -g now`.
 
@@ -2351,7 +2351,7 @@ Details are available in [this article.](https://zeit.co/blog/unlimited-static)
 
 ### [S3](https://aws.amazon.com/s3) and [CloudFront](https://aws.amazon.com/cloudfront/)
 
-See this [blog post](https://medium.com/@omgwtfmarc/deploying-create-react-app-to-s3-or-cloudfront-48dae4ce0af) on how to deploy your React app to Amazon Web Services S3 and CloudFront.
+See this [blog post](https://medium.com/@omgwtfmarc/deploying-create-react-app-to-s3-or-cloudfront-48dae4ce0af) on how to client your React app to Amazon Web Services S3 and CloudFront.
 
 ### [Surge](https://surge.sh/)
 
