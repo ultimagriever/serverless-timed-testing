@@ -1,0 +1,45 @@
+AWSTemplateFormatVersion: 2010-09-09
+Transform: AWS::Serverless-2016-10-31
+
+Globals:
+  Function:
+    CodeUri: ./functions
+    Runtime: nodejs8.10
+    MemorySize: 1024
+    Timeout: 300
+  Api:
+    Cors: "*"
+
+Resources:
+  WebsiteBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      AccessControl: PublicRead
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: index.html
+
+  WebsiteOAI:
+    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+    Properties:
+      CloudFrontOriginAccessIdentityConfig:
+        Comment: WebsiteBucket
+
+  WebsiteDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        Origins:
+          - DomainName: !GetAtt WebsiteBucket.WebsiteURL
+            Id: WebsiteOrigin
+            S3OriginConfig:
+              OriginAccessIdentity: !Sub origin-access-identity/cloudfront/${WebsiteOAI}
+        PriceClass: PriceClass_All
+        DefaultCacheBehavior:
+          TargetOriginId: WebsiteOrigin
+          QueryString: false
+          Cookies:
+            Forward: none
+        ViewerProtocolPolicy: allow-all
+
