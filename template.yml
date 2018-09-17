@@ -8,16 +8,209 @@ Globals:
     MemorySize: 1024
     Timeout: 300
   Api:
-    Cors: "*"
+    Cors:
+      AllowMethods: "'*'"
+      AllowOrigin: "'*'"
+      AllowHeaders: "'*'"
 
 Resources:
-  WebsiteBucket:
-    Type: AWS::S3::Bucket
+  ExecutionRole:
+      Type: AWS::IAM::Role
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: 2012-10-17
+          Statement:
+            - Effect: Allow
+              Action:
+                - sts:AssumeRole
+              Principal:
+                Service:
+                  - lambda.amazonaws.com
+        Policies:
+          - PolicyName: LogPolicy
+            PolicyDocument:
+              Version: 2012-10-17
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - logs:CreateLogGroup
+                    - logs:CreateLogStream
+                    - logs:PutLogEvents
+                  Resource: "*"
+          - PolicyName: DynamoDBPolicy
+            PolicyDocument:
+              Version: 2012-10-17
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - dynamodb:Query
+                    - dynamodb:Scan
+                    - dynamodb:GetItem
+                    - dynamodb:PutItem
+                    - dynamodb:UpdateItem
+                  Resource: "*"
+
+  AdministratorRole:
+    Type: AWS::IAM::Role
     Properties:
-      AccessControl: PublicRead
-      WebsiteConfiguration:
-        IndexDocument: index.html
-        ErrorDocument: index.html
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - sts:AssumeRole
+            Principal:
+              Service:
+                - cognito-idp.amazonaws.com
+      Policies:
+        - PolicyName: AdministratorPolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - execute-api:Invoke
+                Resource:
+                  - !Join
+                    - ""
+                    - - "arn:aws:execute-api:"
+                      - !Ref AWS::Region
+                      - ":"
+                      - !Ref AWS::AccountId
+                      - ":"
+                      - !Ref RestApi
+                      - "/v1/*/*"
+
+  StudentRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - sts:AssumeRole
+            Principal:
+              Service:
+                - cognito-idp.amazonaws.com
+      Policies:
+        - PolicyName: StudentPolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - execute-api:Invoke
+                Resource:
+                  - !Join
+                    - ""
+                    - - "arn:aws:execute-api:"
+                      - !Ref AWS::Region
+                      - ":"
+                      - !Ref AWS::AccountId
+                      - ":"
+                      - !Ref RestApi
+                      - "/v1/GET/tests/*"
+                  - !Join
+                    - ""
+                    - - "arn:aws:execute-api:"
+                      - !Ref AWS::Region
+                      - ":"
+                      - !Ref AWS::AccountId
+                      - ":"
+                      - !Ref RestApi
+                      - "/v1/POST/tests/*/conclude"
+
+  AdminUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      AdminCreateUserConfig:
+        AllowAdminCreateUserOnly: true
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 9
+          RequireLowercase: true
+          RequireUppercase: true
+          RequireNumbers: true
+          RequireSymbols: true
+      UsernameAttributes:
+        - email
+      UserPoolName: ServerlessTimedTestsAdminUsers
+
+  AdminUserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: ServerlessTimedTestsAdminClient
+      ExplicitAuthFlows:
+        - ADMIN_NO_SRP_AUTH
+      UserPoolId: !Ref AdminUserPool
+
+  AdminIdentityPool:
+    Type: AWS::Cognito::IdentityPool
+    Properties:
+      IdentityPoolName: ServerlessTimedTestsIDP
+      AllowUnauthenticatedIdentities: false
+      CognitoIdentityProviders:
+        - ClientId: !Ref AdminUserPoolClient
+          ProviderName: !GetAtt AdminUserPool.ProviderName
+          ServerSideTokenCheck: true
+
+  AdminRoleAttachment:
+    Type: AWS::Cognito::IdentityPoolRoleAttachment
+    Properties:
+      IdentityPoolId: !Ref AdminIdentityPool
+      Roles:
+        authenticated: !GetAtt AdministratorRole.Arn
+
+  StudentUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      AdminCreateUserConfig:
+        AllowAdminCreateUserOnly: true
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 9
+          RequireLowercase: true
+          RequireUppercase: true
+          RequireNumbers: true
+          RequireSymbols: true
+      UsernameAttributes:
+        - email
+      UserPoolName: ServerlessTimedTestsStudentUsers
+
+  StudentUserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+    Properties:
+      ClientName: ServerlessTimedTestsStudentClient
+      ExplicitAuthFlows:
+        - ADMIN_NO_SRP_AUTH
+      UserPoolId: !Ref StudentUserPool
+
+  StudentIdentityPool:
+    Type: AWS::Cognito::IdentityPool
+    Properties:
+      IdentityPoolName: ServerlessTimedTestsIDP
+      AllowUnauthenticatedIdentities: false
+      CognitoIdentityProviders:
+        - ClientId: !Ref StudentUserPoolClient
+          ProviderName: !GetAtt StudentUserPool.ProviderName
+          ServerSideTokenCheck: true
+
+  StudentRoleAttachment:
+    Type: AWS::Cognito::IdentityPoolRoleAttachment
+    Properties:
+      IdentityPoolId: !Ref StudentIdentityPool
+      Roles:
+        authenticated: !GetAtt StudentRole.Arn
+
+  WebsiteBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        AccessControl: PublicRead
+        WebsiteConfiguration:
+          IndexDocument: index.html
+          ErrorDocument: index.html
 
   WebsiteOAI:
     Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
@@ -31,15 +224,87 @@ Resources:
       DistributionConfig:
         Enabled: true
         Origins:
-          - DomainName: !GetAtt WebsiteBucket.WebsiteURL
+          - DomainName: !Select
+              - 1
+              - !Split
+                - "//"
+                - !GetAtt WebsiteBucket.WebsiteURL
             Id: WebsiteOrigin
-            S3OriginConfig:
-              OriginAccessIdentity: !Sub origin-access-identity/cloudfront/${WebsiteOAI}
+            CustomOriginConfig:
+              HTTPPort: 80
+              HTTPSPort: 443
+              OriginProtocolPolicy: https-only
         PriceClass: PriceClass_All
         DefaultCacheBehavior:
           TargetOriginId: WebsiteOrigin
-          QueryString: false
-          Cookies:
-            Forward: none
-        ViewerProtocolPolicy: allow-all
+          ForwardedValues:
+            QueryString: false
+            Cookies:
+              Forward: none
+          ViewerProtocolPolicy: allow-all
 
+  GetTests:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: tests.get
+      Role: !GetAtt ExecutionRole.Arn
+      Events:
+        Get:
+          Type: Api
+          Properties:
+            RestApiId: !Ref RestApi
+            Method: get
+            Path: /tests
+
+  RestApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: v1
+      DefinitionBody:
+        swagger: "2.0"
+        info:
+          version: "1.0.0"
+          title: "Serverless Timed Tests"
+        basePath: "/v1"
+        tags:
+          - name: Tests
+            description: Test-related endpoints
+          - name: Questions
+            description: Question-related endpoints
+          - name: Attempts
+            description: Attempt-related endpoints
+
+        paths:
+          /tests:
+            get:
+              summary: Fetches list of tests
+              description: Gets all tests created to date
+              tags:
+                - Tests
+              responses:
+                "200":
+                  description: OK
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                type: aws_proxy
+                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GetTests.Arn}/invocations
+
+Outputs:
+  AdminClientId:
+    Description: Admin user pool client ID
+    Value: !Ref AdminUserPoolClient
+  AdminUserPoolId:
+    Description: Admin user pool ID
+    Value: !Ref AdminUserPool
+  AdminIdentityPoolId:
+    Description: Admin identity pool ID
+    Value: !Ref AdminIdentityPool
+  StudentClientId:
+    Description: Student user pool client ID
+    Value: !Ref StudentUserPoolClient
+  StudentUserPoolId:
+    Description: Student user pool ID
+    Value: !Ref StudentUserPool
+  StudentIdentityPoolId:
+    Description: Student identity pool ID
+    Value: !Ref StudentIdentityPool
