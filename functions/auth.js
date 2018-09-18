@@ -1,5 +1,6 @@
 const admin = require('firebase-admin');
 const AWS = require('aws-sdk');
+const moment = require('moment');
 const serviceAccount = require('./serviceAccountKey.json');
 
 admin.initializeApp({
@@ -109,11 +110,20 @@ exports.authenticate = async function(event) {
 
     const row = snapshot.val();
 
-    if (!(row.code === code)) {
+    if (row.code !== code) {
       return {
         statusCode: 401,
         body: JSON.stringify({
           message: 'Unauthorized'
+        })
+      };
+    }
+
+    if (moment().valueOf() > moment(row.iat).add(10, 'minute')) {
+      return {
+        statusCode: 401,
+        body: JSON.stringify({
+          message: 'Expired Code'
         })
       };
     }
