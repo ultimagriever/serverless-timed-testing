@@ -1,0 +1,5 @@
+{
+  "Url": "https://securetoken.google.com/<Firebase Client ID>",
+  "ClientIDList": [ "<Firebase Client ID>" ],
+  "ThumbprintList": [ "6040DB92306CC8BCEB31CACAC88D107430B16AFF" ]
+}

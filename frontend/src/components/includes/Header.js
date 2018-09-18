@@ -24,7 +24,7 @@ class Header extends Component {
 
   render() {
     return (
-      <Navbar color="dark" dark expand="lg" fixedTop>
+      <Navbar color="dark" dark expand="lg" fixed="top">
         <Container>
           <NavbarBrand tag={Link} to="/">
             Serverless Timed Tests
@@ -40,7 +40,7 @@ class Header extends Component {
               </NavItem>
             </Nav>
 
-            <Nav class="ml-auto" navbar>
+            <Nav className="ml-auto" navbar>
               <NavItem>
                 <NavLink tag={Link} to="/login">
                   Login

@@ -3,7 +3,6 @@ Transform: AWS::Serverless-2016-10-31
 
 Globals:
   Function:
-    CodeUri: ./functions
     Runtime: nodejs8.10
     MemorySize: 1024
     Timeout: 300
@@ -12,6 +11,12 @@ Globals:
       AllowMethods: "'*'"
       AllowOrigin: "'*'"
       AllowHeaders: "'*'"
+
+Parameters:
+  OpenIDConnectProviderArn:
+    Type: String
+    Description: OpenID Connect Provider ARN for Student Identity Pool
+    AllowedPattern: '^arn:aws:iam::\d+:oidc-provider/.*$'
 
 Resources:
   ExecutionRole:
@@ -48,6 +53,15 @@ Resources:
                     - dynamodb:GetItem
                     - dynamodb:PutItem
                     - dynamodb:UpdateItem
+                  Resource: "*"
+          - PolicyName: TextMessagePolicy
+            PolicyDocument:
+              Version: 2012-10-17
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - sns:Publish
+                    - sns:SetSMSAttributes
                   Resource: "*"
 
   AdministratorRole:
@@ -162,40 +176,13 @@ Resources:
       Roles:
         authenticated: !GetAtt AdministratorRole.Arn
 
-  StudentUserPool:
-    Type: AWS::Cognito::UserPool
-    Properties:
-      AdminCreateUserConfig:
-        AllowAdminCreateUserOnly: true
-      Policies:
-        PasswordPolicy:
-          MinimumLength: 9
-          RequireLowercase: true
-          RequireUppercase: true
-          RequireNumbers: true
-          RequireSymbols: true
-      UsernameAttributes:
-        - email
-      UserPoolName: ServerlessTimedTestsStudentUsers
-
-  StudentUserPoolClient:
-    Type: AWS::Cognito::UserPoolClient
-    Properties:
-    Properties:
-      ClientName: ServerlessTimedTestsStudentClient
-      ExplicitAuthFlows:
-        - ADMIN_NO_SRP_AUTH
-      UserPoolId: !Ref StudentUserPool
-
   StudentIdentityPool:
     Type: AWS::Cognito::IdentityPool
     Properties:
       IdentityPoolName: ServerlessTimedTestsIDP
       AllowUnauthenticatedIdentities: false
-      CognitoIdentityProviders:
-        - ClientId: !Ref StudentUserPoolClient
-          ProviderName: !GetAtt StudentUserPool.ProviderName
-          ServerSideTokenCheck: true
+      OpenIdConnectProviderARNs:
+        - !Ref OpenIDConnectProviderArn
 
   StudentRoleAttachment:
     Type: AWS::Cognito::IdentityPoolRoleAttachment
@@ -246,6 +233,7 @@ Resources:
   GetTests:
     Type: AWS::Serverless::Function
     Properties:
+      CodeUri: ./functions
       Handler: tests.get
       Role: !GetAtt ExecutionRole.Arn
       Events:
@@ -255,6 +243,51 @@ Resources:
             RestApiId: !Ref RestApi
             Method: get
             Path: /tests
+
+  CreateStudent:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./functions
+      Handler: auth.createUser
+      Role: !GetAtt ExecutionRole.Arn
+      Events:
+        CreateStudentPost:
+          Type: Api
+          Properties:
+            Method: post
+            Path: /students
+            RestApiId: !Ref RestApi
+
+  RequestOTP:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./functions
+      Handler: auth.generateCode
+      Role: !GetAtt ExecutionRole.Arn
+      Events:
+        RequestOTP:
+          Type: Api
+          Properties:
+            Method: post
+            Path: /students/request-otp
+            RestApiId: !Ref RestApi
+
+  AuthenticateStudent:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./functions
+      Handler: auth.authenticate
+      Role: !GetAtt ExecutionRole.Arn
+      Environment:
+        Variables:
+          COGNITO_IDENTITY_POOL_ID: !Ref AdminIdentityPool
+      Events:
+        Authenticate:
+          Type: Api
+          Properties:
+            Method: post
+            Path: /students/authenticate
+            RestApiId: !Ref RestApi
 
   RestApi:
     Type: AWS::Serverless::Api
@@ -273,7 +306,8 @@ Resources:
             description: Question-related endpoints
           - name: Attempts
             description: Attempt-related endpoints
-
+          - name: Students
+            description: Student-related endpoints
         paths:
           /tests:
             get:
@@ -288,6 +322,58 @@ Resources:
                 httpMethod: POST
                 type: aws_proxy
                 uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GetTests.Arn}/invocations
+          /students:
+            post:
+              summary: Create a student to undertake created tests
+              description: Creates new student in Firebase Auth
+              tags:
+                - Students
+              responses:
+                "201":
+                  description: Created
+                "422":
+                  description: Unprocessable Entity
+                "500":
+                  description: Internal Server Error
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                type: aws_proxy
+                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CreateStudent.Arn}/invocations
+              x-amazon-apigateway-auth:
+                type: aws_iam
+          /students/request-otp:
+            post:
+              summary: Request new one-time password
+              description: Requests a new one-time password if the user exists in the base
+              tags:
+                - Students
+              responses:
+                "200":
+                  description: OK
+                "422":
+                  description: Unprocessable Entity
+                "500":
+                  description: Internal Server Error
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                type: aws_proxy
+                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${RequestOTP.Arn}/invocations
+          /students/authenticate:
+            post:
+              summary: Authenticate OTP against phone
+              description: Check if code issued for phone is valid
+              tags:
+                - Students
+              responses:
+                "200":
+                  description: OK
+                "401":
+                  description: Unauthorized
+                "422":
+                  description: Unprocessable Entity
+                "500":
+                  description: Internal Server Error
+
 
 Outputs:
   AdminClientId:
@@ -299,12 +385,6 @@ Outputs:
   AdminIdentityPoolId:
     Description: Admin identity pool ID
     Value: !Ref AdminIdentityPool
-  StudentClientId:
-    Description: Student user pool client ID
-    Value: !Ref StudentUserPoolClient
-  StudentUserPoolId:
-    Description: Student user pool ID
-    Value: !Ref StudentUserPool
   StudentIdentityPoolId:
     Description: Student identity pool ID
     Value: !Ref StudentIdentityPool

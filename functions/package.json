@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "aws-sdk": "^2.316.0",
+    "firebase-admin": "^6.0.0"
+  }
+}

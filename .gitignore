@@ -1,2 +1,5 @@
 .idea
 packaged-template.yml
+parameters
+**/node_modules
+serviceAccountKey.json
