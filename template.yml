@@ -8,9 +8,10 @@ Globals:
     Timeout: 300
   Api:
     Cors:
+      AllowHeaders: "'*'"
       AllowMethods: "'*'"
       AllowOrigin: "'*'"
-      AllowHeaders: "'*'"
+      MaxAge: "'86400'"
 
 Parameters:
   OpenIDConnectProviderArn:
@@ -72,10 +73,10 @@ Resources:
         Statement:
           - Effect: Allow
             Action:
-              - sts:AssumeRole
+              - sts:AssumeRoleWithWebIdentity
             Principal:
-              Service:
-                - cognito-idp.amazonaws.com
+              Federated:
+                - cognito-identity.amazonaws.com
       Policies:
         - PolicyName: AdministratorPolicy
           PolicyDocument:
@@ -92,7 +93,7 @@ Resources:
                       - ":"
                       - !Ref AWS::AccountId
                       - ":"
-                      - !Ref RestApi
+                      - !Ref ServerlessRestApi
                       - "/v1/*/*"
 
   StudentRole:
@@ -103,10 +104,10 @@ Resources:
         Statement:
           - Effect: Allow
             Action:
-              - sts:AssumeRole
+              - sts:AssumeRoleWithWebIdentity
             Principal:
-              Service:
-                - cognito-idp.amazonaws.com
+              Federated:
+                - cognito-identity.amazonaws.com
       Policies:
         - PolicyName: StudentPolicy
           PolicyDocument:
@@ -123,7 +124,7 @@ Resources:
                       - ":"
                       - !Ref AWS::AccountId
                       - ":"
-                      - !Ref RestApi
+                      - !Ref ServerlessRestApi
                       - "/v1/GET/tests/*"
                   - !Join
                     - ""
@@ -132,8 +133,21 @@ Resources:
                       - ":"
                       - !Ref AWS::AccountId
                       - ":"
-                      - !Ref RestApi
+                      - !Ref ServerlessRestApi
                       - "/v1/POST/tests/*/conclude"
+
+  UnauthenticatedRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - sts:AssumeRoleWithWebIdentity
+            Principal:
+              Federated:
+                - cognito-identity.amazonaws.com
 
   AdminUserPool:
     Type: AWS::Cognito::UserPool
@@ -162,7 +176,7 @@ Resources:
   AdminIdentityPool:
     Type: AWS::Cognito::IdentityPool
     Properties:
-      IdentityPoolName: ServerlessTimedTestsIDP
+      IdentityPoolName: ServerlessTimedTestsAdminIDP
       AllowUnauthenticatedIdentities: false
       CognitoIdentityProviders:
         - ClientId: !Ref AdminUserPoolClient
@@ -175,11 +189,12 @@ Resources:
       IdentityPoolId: !Ref AdminIdentityPool
       Roles:
         authenticated: !GetAtt AdministratorRole.Arn
+        unauthenticated: !GetAtt UnauthenticatedRole.Arn
 
   StudentIdentityPool:
     Type: AWS::Cognito::IdentityPool
     Properties:
-      IdentityPoolName: ServerlessTimedTestsIDP
+      IdentityPoolName: ServerlessTimedTestsStudentIDP
       AllowUnauthenticatedIdentities: false
       OpenIdConnectProviderARNs:
         - !Ref OpenIDConnectProviderArn
@@ -190,6 +205,7 @@ Resources:
       IdentityPoolId: !Ref StudentIdentityPool
       Roles:
         authenticated: !GetAtt StudentRole.Arn
+        unauthenticated: !GetAtt UnauthenticatedRole.Arn
 
   WebsiteBucket:
       Type: AWS::S3::Bucket
@@ -240,7 +256,7 @@ Resources:
         Get:
           Type: Api
           Properties:
-            RestApiId: !Ref RestApi
+#            RestApiId: !Ref RestApi
             Method: get
             Path: /tests
 
@@ -256,7 +272,7 @@ Resources:
           Properties:
             Method: post
             Path: /students
-            RestApiId: !Ref RestApi
+#            RestApiId: !Ref RestApi
 
   RequestOTP:
     Type: AWS::Serverless::Function
@@ -270,7 +286,7 @@ Resources:
           Properties:
             Method: post
             Path: /students/request-otp
-            RestApiId: !Ref RestApi
+#            RestApiId: !Ref RestApi
 
   AuthenticateStudent:
     Type: AWS::Serverless::Function
@@ -278,102 +294,156 @@ Resources:
       CodeUri: ./functions
       Handler: auth.authenticate
       Role: !GetAtt ExecutionRole.Arn
-      Environment:
-        Variables:
-          COGNITO_IDENTITY_POOL_ID: !Ref AdminIdentityPool
       Events:
         Authenticate:
           Type: Api
           Properties:
             Method: post
             Path: /students/authenticate
-            RestApiId: !Ref RestApi
+#           RestApiId: !Ref RestApi
 
-  RestApi:
-    Type: AWS::Serverless::Api
-    Properties:
-      StageName: v1
-      DefinitionBody:
-        swagger: "2.0"
-        info:
-          version: "1.0.0"
-          title: "Serverless Timed Tests"
-        basePath: "/v1"
-        tags:
-          - name: Tests
-            description: Test-related endpoints
-          - name: Questions
-            description: Question-related endpoints
-          - name: Attempts
-            description: Attempt-related endpoints
-          - name: Students
-            description: Student-related endpoints
-        paths:
-          /tests:
-            get:
-              summary: Fetches list of tests
-              description: Gets all tests created to date
-              tags:
-                - Tests
-              responses:
-                "200":
-                  description: OK
-              x-amazon-apigateway-integration:
-                httpMethod: POST
-                type: aws_proxy
-                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GetTests.Arn}/invocations
-          /students:
-            post:
-              summary: Create a student to undertake created tests
-              description: Creates new student in Firebase Auth
-              tags:
-                - Students
-              responses:
-                "201":
-                  description: Created
-                "422":
-                  description: Unprocessable Entity
-                "500":
-                  description: Internal Server Error
-              x-amazon-apigateway-integration:
-                httpMethod: POST
-                type: aws_proxy
-                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CreateStudent.Arn}/invocations
-              x-amazon-apigateway-auth:
-                type: aws_iam
-          /students/request-otp:
-            post:
-              summary: Request new one-time password
-              description: Requests a new one-time password if the user exists in the base
-              tags:
-                - Students
-              responses:
-                "200":
-                  description: OK
-                "422":
-                  description: Unprocessable Entity
-                "500":
-                  description: Internal Server Error
-              x-amazon-apigateway-integration:
-                httpMethod: POST
-                type: aws_proxy
-                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${RequestOTP.Arn}/invocations
-          /students/authenticate:
-            post:
-              summary: Authenticate OTP against phone
-              description: Check if code issued for phone is valid
-              tags:
-                - Students
-              responses:
-                "200":
-                  description: OK
-                "401":
-                  description: Unauthorized
-                "422":
-                  description: Unprocessable Entity
-                "500":
-                  description: Internal Server Error
-
+#  RestApi:
+#    Type: AWS::Serverless::Api
+#    Properties:
+#      StageName: v1
+#      DefinitionBody:
+#        swagger: "2.0"
+#        info:
+#          version: "1.0.0"
+#          title: "Serverless Timed Tests"
+#        basePath: "/v1"
+#        tags:
+#          - name: Tests
+#            description: Test-related endpoints
+#          - name: Questions
+#            description: Question-related endpoints
+#          - name: Attempts
+#            description: Attempt-related endpoints
+#          - name: Students
+#            description: Student-related endpoints
+#        paths:
+#          /tests:
+#            get:
+#              summary: Fetches list of tests
+#              description: Gets all tests created to date
+#              tags:
+#                - Tests
+#              responses:
+#                "200":
+#                  description: OK
+#                  headers:
+#                    Access-Control-Allow-Origin:
+#                      type: string
+#              x-amazon-apigateway-integration:
+#                httpMethod: POST
+#                type: aws_proxy
+#                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GetTests.Arn}/invocations
+#                responses:
+#                  default:
+#                    statusCode: 200
+#                    responseParameters:
+#                      method.response.header.Access-Control-Allow-Origin: "'*'"
+#          /students:
+#            post:
+#              summary: Create a student to undertake created tests
+#              description: Creates new student in Firebase Auth
+#              tags:
+#                - Students
+#              responses:
+#                "201":
+#                  description: Created
+#                  headers:
+#                    Access-Control-Allow-Origin:
+#                      type: string
+#                "422":
+#                  description: Unprocessable Entity
+#                  headers:
+#                    Access-Control-Allow-Origin:
+#                      type: string
+#                "500":
+#                  description: Internal Server Error
+#                  headers:
+#                    Access-Control-Allow-Origin:
+#                      type: string
+#              x-amazon-apigateway-integration:
+#                httpMethod: POST
+#                type: aws_proxy
+#                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CreateStudent.Arn}/invocations
+#                responses:
+#                  default:
+#                    statusCode: 200
+#                    responseParameters:
+#                      method.response.header.Access-Control-Allow-Origin: "'*'"
+#              x-amazon-apigateway-auth:
+#                type: aws_iam
+#          /students/request-otp:
+#            post:
+#              summary: Request new one-time password
+#              description: Requests a new one-time password if the user exists in the base
+#              tags:
+#                - Students
+#              responses:
+#                "200":
+#                  description: OK
+#                  headers:
+#                    Access-Control-Allow-Origin:
+#                      type: string
+#                "422":
+#                  description: Unprocessable Entity
+#                  headers:
+#                    Access-Control-Allow-Origin:
+#                      type: string
+#                "500":
+#                  description: Internal Server Error
+#                  headers:
+#                    Access-Control-Allow-Origin:
+#                      type: string
+#              x-amazon-apigateway-integration:
+#                httpMethod: POST
+#                type: aws_proxy
+#                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${RequestOTP.Arn}/invocations
+#                responses:
+#                  default:
+#                    statusCode: 200
+#                    responseParameters:
+#                      method.response.header.Access-Control-Allow-Origin: "'*'"
+#
+#          /students/authenticate:
+#            post:
+#              summary: Authenticate OTP against phone
+#              description: Check if code issued for phone is valid
+#              tags:
+#                - Students
+#              responses:
+#                "200":
+#                  description: OK
+#                  headers:
+#                    Access-Control-Allow-Origin:
+#                      type: string
+#                "401":
+#                  description: Unauthorized
+#                  headers:
+#                    Access-Control-Allow-Origin:
+#                      type: string
+#                "422":
+#                  description: Unprocessable Entity
+#                  headers:
+#                    Access-Control-Allow-Origin:
+#                      type: string
+#                "500":
+#                  description: Internal Server Error
+#                  headers:
+#                    Access-Control-Allow-Origin:
+#                      type: string
+#              x-amazon-apigateway-integration:
+#                httpMethod: POST
+#                type: aws_proxy
+#                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AuthenticateStudent.Arn}/invocations
+#                responses:
+#                  default:
+#                    statusCode: 200
+#                    responseParameters:
+#                      method.response.header.Access-Control-Allow-Origin: "'*'"
 
 Outputs:
   AdminClientId:
@@ -388,3 +458,6 @@ Outputs:
   StudentIdentityPoolId:
     Description: Student identity pool ID
     Value: !Ref StudentIdentityPool
+  ApiEndpoint:
+    Description: API Gateway endpoint
+    Value: !Sub https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod

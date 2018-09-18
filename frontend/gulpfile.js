@@ -5,7 +5,10 @@ var gulp = require('gulp'),
     sourcemaps = require('gulp-sourcemaps');
 
 gulp.task('sass', function() {
-  return gulp.src('./src/styles/index.scss')
+  gulp.src('./node_modules/font-awesome-sass/assets/fonts/**/*')
+    .pipe(gulp.dest('./src/styles/fonts'));
+
+  gulp.src('./src/styles/index.scss')
     .pipe(sourcemaps.init())
     .pipe(sass.sync({
       outputStyle: 'compressed',
@@ -15,11 +18,11 @@ gulp.task('sass', function() {
       ]
     }).on('error', sass.logError))
     .pipe(sourcemaps.write('.'))
-    .pipe(gulp.dest('./src/styles/css'))
+    .pipe(gulp.dest('./src/styles/css'));
 });
 
 gulp.task('sass:watch', function() {
-  return gulp.watch('./src/styles/**/*.scss', ['sass']);
+  return gulp.watch('src/styles/**/*.scss', ['sass']);
 });
 
 gulp.task('default', ['sass']);

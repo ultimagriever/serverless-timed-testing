@@ -1,6 +1,17 @@
 @import "variables";
 @import "bootstrap/scss/bootstrap";
+@import "font-awesome-sass/assets/stylesheets/font-awesome";
 
 body {
   margin-top: 60px;
+  min-height: calc(100vh - 60px);
+  display: flex;
+
+  #root, #root > div {
+    flex: 1;
+    display: flex;
+  }
 }
+
+@import "components/Login";
+@import "components/LoginForms";

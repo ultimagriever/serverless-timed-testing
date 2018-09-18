@@ -1,0 +1,15 @@
+#student-login-form, #admin-login-form {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+#student-login-form {
+  justify-content: space-evenly;
+}
+
+#admin-login-form {
+  .form-group:last-of-type {
+    margin-top: auto;
+  }
+}

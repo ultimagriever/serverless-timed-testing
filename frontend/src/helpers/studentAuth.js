@@ -1,4 +1,5 @@
 import axios from 'axios';
+import firebase from 'firebase';
 import { setCognitoCredentials } from './idp';
 
 const request = axios.create({
@@ -8,19 +9,28 @@ const request = axios.create({
 export async function requestOneTimePassword(phone) {
   const response = await request.post('/students/request-otp', { phone });
 
-  return response.success;
+  return response.data.success;
 }
 
 export async function authenticateOneTimePassword({ code, phone }) {
   try {
-    const response = await request.post('/students/authenticate', { code, phone });
+    const { data } = await request.post('/students/authenticate', { code, phone });
 
-    if (response.token) {
+    if (data.token) {
+      const { token } = data;
+
+      await firebase.auth().signInWithCustomToken(token);
+
+      const idToken = await firebase.auth().currentUser.getIdToken(true);
+      console.log(idToken);
+
       await setCognitoCredentials({
         identityPoolId: process.env.REACT_APP_STUDENT_IDENTITY_POOL_ID,
         loginDomain: `securetoken.google.com/${process.env.REACT_APP_FIREBASE_PROJECT_ID}`,
-        token: response.token
+        token: idToken
       });
+
+      return token;
     }
   } catch (err) {
     throw err;

@@ -15,7 +15,7 @@ export default combineReducers({
   session(state = null, { type, payload }) {
     switch (type) {
       case AUTH_SIGNIN:
-        return payload.session;
+        return payload.session || null;
       case AUTH_SIGNOUT:
         return null;
       default:
@@ -25,7 +25,17 @@ export default combineReducers({
   user(state = null, { type, payload }) {
     switch (type) {
       case AUTH_SIGNIN:
-        return payload.user;
+        return payload.user || null;
+      case AUTH_SIGNOUT:
+        return null;
+      default:
+        return state;
+    }
+  },
+  token(state = null, { type, payload }) {
+    switch (type) {
+      case AUTH_SIGNIN:
+        return payload.token || null;
       case AUTH_SIGNOUT:
         return null;
       default:
