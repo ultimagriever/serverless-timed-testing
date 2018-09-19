@@ -58,7 +58,7 @@ export async function getCurrentlySignedIn() {
 export async function signoutStudentAuth() {
   try {
     const user = firebase.auth().currentUser;
-    console.log(user);
+
     if (user) {
       await firebase.auth().signOut();
     }
