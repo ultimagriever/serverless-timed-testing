@@ -6,6 +6,7 @@ import { withRouter } from 'react-router-dom';
 import Header from './includes/Header';
 import Routes from '../routes';
 import { signInCurrentStudent } from '../actions/studentAuthActions';
+import { getSignedInAdmin } from '../actions/adminAuthActions';
 
 class App extends Component {
   componentWillMount() {
@@ -16,6 +17,7 @@ class App extends Component {
     });
 
     this.props.signInCurrentStudent();
+    this.props.getSignedInAdmin();
   }
 
   render() {
@@ -30,4 +32,4 @@ class App extends Component {
   }
 }
 
-export default withRouter(connect(null, { signInCurrentStudent })(App));
+export default withRouter(connect(null, { signInCurrentStudent, getSignedInAdmin })(App));

@@ -3,11 +3,18 @@ import { connect } from 'react-redux';
 import { Redirect } from 'react-router-dom';
 import { Jumbotron } from 'reactstrap';
 import { signoutStudent } from '../actions/studentAuthActions';
+import { signoutAdmin } from '../actions/adminAuthActions';
 
 class Logout extends Component {
   componentWillMount() {
     // TODO check for admin logout
-    this.props.signoutStudent();
+    const { user } = this.props;
+
+    if (user) {
+      this.props.signoutAdmin();
+    } else {
+      this.props.signoutStudent();
+    }
   }
 
   render() {
@@ -23,4 +30,7 @@ class Logout extends Component {
   }
 }
 
-export default connect(null, { signoutStudent })(Logout);
+export default connect(state => ({
+  user: state.auth.user,
+  token: state.auth.token
+}), { signoutStudent, signoutAdmin })(Logout);

@@ -33,10 +33,12 @@ export function signInCurrentStudent() {
     try {
       const token = await getCurrentlySignedIn();
 
-      dispatch({
-        type: AUTH_SIGNIN,
-        payload: { token }
-      });
+      if (token) {
+        dispatch({
+          type: AUTH_SIGNIN,
+          payload: { token }
+        });
+      }
     } catch (err) {
       console.error(err);
     } finally {

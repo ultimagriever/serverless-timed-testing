@@ -15,7 +15,11 @@ export function login({ email, password }) {
 
   return new Promise((resolve, reject) =>
     user.authenticateUser(authDetails, {
-      onSuccess: session => resolve({ user, session }),
+      onSuccess: async session => {
+        await setCognitoIdpSession({ session });
+
+        resolve({ user, session });
+      },
       onFailure: err => reject(err)
     })
   );
@@ -24,7 +28,7 @@ export function login({ email, password }) {
 export async function setCognitoIdpSession({ session }) {
   await setCognitoCredentials({
     identityPoolId: config.idp,
-    loginDomain: `cognito-idp.${process.env.REACT_APP_AWS_REGION}.amazonaws.com/${config.idp}`,
+    loginDomain: `cognito-idp.${process.env.REACT_APP_AWS_REGION}.amazonaws.com/${process.env.REACT_APP_ADMIN_USER_POOL_ID}`,
     token: session.getIdToken().getJwtToken()
   });
 }
@@ -49,7 +53,7 @@ export function getUserFromLocalStorage() {
         }
 
         try {
-          await setCognitoIdpSession({ scope, session });
+          await setCognitoIdpSession({ session });
 
           resolve({ user, session });
         } catch (err) {
