@@ -1,26 +1,20 @@
 import React, { Component } from 'react';
 import { Container } from 'reactstrap';
-import firebase from 'firebase/app';
 import { connect } from 'react-redux';
 import { withRouter } from 'react-router-dom';
 import Header from './includes/Header';
 import Routes from '../routes';
-import { signInCurrentStudent } from '../actions/studentAuthActions';
-import { getSignedInAdmin } from '../actions/adminAuthActions';
 
 class App extends Component {
-  componentWillMount() {
-    firebase.initializeApp({
-      apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
-      authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
-      projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID
-    });
-
-    this.props.signInCurrentStudent();
-    this.props.getSignedInAdmin();
-  }
-
   render() {
+    if (this.props.retrieving && !this.props.authenticated) {
+      return (
+        <Container fluid>
+          <i className="fa fa-spinner fa-spin fa-5x" />
+        </Container>
+      );
+    }
+
     return (
       <div>
         <Header/>
@@ -32,4 +26,4 @@ class App extends Component {
   }
 }
 
-export default withRouter(connect(null, { signInCurrentStudent, getSignedInAdmin })(App));
+export default withRouter(connect(state => state.auth)(App));
