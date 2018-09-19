@@ -1,5 +1,8 @@
+import RequireAuth from '../hoc/RequireAuth';
+
 import Index from '../components/Index';
 import Login from '../components/Login';
+import Logout from '../components/Logout';
 
 const routes = [
   {
@@ -9,6 +12,10 @@ const routes = [
   {
     path: '/login',
     component: Login
+  },
+  {
+    path: '/logout',
+    component: RequireAuth(Logout)
   }
 ];
 

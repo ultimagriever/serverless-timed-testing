@@ -10,6 +10,7 @@ import {
   Container
 } from 'reactstrap';
 import { Link } from 'react-router-dom';
+import { connect } from 'react-redux';
 
 class Header extends Component {
   state = {
@@ -42,8 +43,8 @@ class Header extends Component {
 
             <Nav className="ml-auto" navbar>
               <NavItem>
-                <NavLink tag={Link} to="/login">
-                  Login
+                <NavLink tag={Link} to={this.props.authenticated ? '/logout': '/login'}>
+                  {this.props.authenticated ? 'Logout' : 'Login'}
                 </NavLink>
               </NavItem>
             </Nav>
@@ -54,4 +55,4 @@ class Header extends Component {
   }
 }
 
-export default Header;
+export default connect(state => ({ authenticated: state.auth.authenticated }))(Header);

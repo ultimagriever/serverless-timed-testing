@@ -73,10 +73,10 @@ Resources:
         Statement:
           - Effect: Allow
             Action:
-              - sts:AssumeRoleWithWebIdentity
+              - sts:AssumeRole
             Principal:
-              Federated:
-                - cognito-identity.amazonaws.com
+              Service:
+                - cognito-idp.amazonaws.com
       Policies:
         - PolicyName: AdministratorPolicy
           PolicyDocument:

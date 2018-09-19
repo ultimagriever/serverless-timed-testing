@@ -7,7 +7,6 @@ import StudentLoginForm from './forms/StudentLoginForm';
 
 class Login extends Component {
   render() {
-    console.log(this.props.authenticated);
     if (this.props.authenticated) {
       return <Redirect to="/" />;
     }
