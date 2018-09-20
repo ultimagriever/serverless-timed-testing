@@ -20,13 +20,9 @@ firebase.initializeApp({
 });
 
 firebase.auth().onAuthStateChanged(user => {
-  if (user) {
-    console.log('student logged in');
-    store.dispatch(signInCurrentStudent());
-  } else {
-    console.log('admin logged in?');
-    store.dispatch(getSignedInAdmin());
-  }
+  const action = user ? signInCurrentStudent() : getSignedInAdmin();
+
+  store.dispatch(action);
 });
 
 ReactDOM.render(
