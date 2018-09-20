@@ -10,7 +10,9 @@ class App extends Component {
     if (this.props.retrieving && !this.props.authenticated) {
       return (
         <Container fluid>
-          <i className="fa fa-spinner fa-spin fa-5x" />
+          <div className="flex-grow-1 d-flex justify-content-center align-items-center">
+            <i className="fa fa-spinner fa-spin fa-5x" />
+          </div>
         </Container>
       );
     }
