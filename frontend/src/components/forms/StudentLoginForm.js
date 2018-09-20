@@ -35,7 +35,7 @@ class StudentLoginForm extends Component {
 
     clearInterval(this.interval);
     await this.props.authenticateStudent(values);
-    this.props.history.push('/');
+    this.props.history.push('/student/dashboard');
   };
 
   startCountdown() {

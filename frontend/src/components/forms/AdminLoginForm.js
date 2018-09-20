@@ -17,7 +17,7 @@ class AdminLoginForm extends Component {
 
     await this.props.signinAdmin(values);
 
-    this.props.history.push('/');
+    this.props.history.push('/admin/dashboard');
   };
 
   render() {
