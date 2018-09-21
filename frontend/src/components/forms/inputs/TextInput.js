@@ -2,7 +2,7 @@ import React from 'react';
 import { Input } from 'reactstrap';
 import BaseInput from './BaseInput';
 
-export default function TextInput(props) {
+function TextInput(props) {
   const { input, ...rest } = props;
 
   const { type, placeholder, disabled, meta: { touched, error, warning } } = props;
@@ -13,6 +13,7 @@ export default function TextInput(props) {
     <BaseInput {...rest}>
       <Input
         type={type}
+        id={input.name}
         placeholder={placeholder}
         valid={touched ? isValid : undefined}
         invalid={touched ? !isValid : undefined}
@@ -22,3 +23,9 @@ export default function TextInput(props) {
     </BaseInput>
   );
 }
+
+TextInput.defaultProps = {
+  type: "text"
+};
+
+export default TextInput;

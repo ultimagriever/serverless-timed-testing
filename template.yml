@@ -252,12 +252,38 @@ Resources:
       CodeUri: ./functions
       Handler: tests.get
       Role: !GetAtt ExecutionRole.Arn
+      Environment:
+        Variables:
+          DYNAMODB_TABLE: !Ref TestsTable
       Events:
         Get:
           Type: Api
           Properties:
             RestApiId: !Ref RestApi
             Method: get
+            Path: /tests
+        GetById:
+          Type: Api
+          Properties:
+            RestApiId: !Ref RestApi
+            Method: get
+            Path: /tests/{id}
+
+  CreateTest:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./functions
+      Handler: tests.create
+      Role: !GetAtt ExecutionRole.Arn
+      Environment:
+        Variables:
+          DYNAMODB_TABLE: !Ref TestsTable
+      Events:
+        Post:
+          Type: Api
+          Properties:
+            RestApiId: !Ref RestApi
+            Method: post
             Path: /tests
 
   CreateStudent:
@@ -302,6 +328,33 @@ Resources:
             Path: /students/authenticate
             RestApiId: !Ref RestApi
 
+  TestsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: ownerId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: owner-index
+          KeySchema:
+            - AttributeName: ownerId
+              KeyType: HASH
+            - AttributeName: id
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+          ProvisionedThroughput:
+            ReadCapacityUnits: 5
+            WriteCapacityUnits: 1
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 1
+
   RestApi:
     Type: AWS::Serverless::Api
     Properties:
@@ -335,6 +388,41 @@ Resources:
                 httpMethod: POST
                 type: aws_proxy
                 uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GetTests.Arn}/invocations
+              x-amazon-apigateway-auth:
+                type: aws_iam
+            post:
+              summary: Creates a new test
+              description: Creates a new test under the authenticated user
+              tags:
+                - Tests
+              responses:
+                "201":
+                  description: Created
+                "500":
+                  description: Internal Server Error
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                type: aws_proxy
+                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GetTests.Arn}/invocations
+              x-amazon-apigateway-auth:
+                type: aws_iam
+          /tests/{id}:
+            get:
+              summary: Fetches individual test
+              description: Fetches test in DynamoDB table by its GUID
+              tags:
+                - Tests
+              responses:
+                "200":
+                  description: OK
+                "404":
+                  description: Not Found
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                type: aws_proxy
+                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GetTests.Arn}/invocations
+              x-amazon-apigateway-auth:
+                type: aws_iam
           /students:
             post:
               summary: Create a student to undertake created tests

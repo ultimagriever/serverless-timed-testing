@@ -11,3 +11,11 @@ exports.addCorsHeader = function(response) {
 
   return corsResponse;
 };
+
+exports.extractUserGuid = function(event) {
+  const { cognitoAuthenticationProvider } = event.requestContext.identity;
+
+  const provider = cognitoAuthenticationProvider.split(',').pop();
+
+  return provider.split(':').pop();
+};

@@ -53,23 +53,23 @@ You can find the most recent version of this guide [here](https://github.com/fac
 - [Generating Dynamic `<meta>` Tags on the Server](#generating-dynamic-meta-tags-on-the-server)
 - [Pre-Rendering into Static HTML Files](#pre-rendering-into-static-html-files)
 - [Injecting Data from the Server into the Page](#injecting-data-from-the-server-into-the-page)
-- [Running Tests](#running-tests)
+- [Running ListTests](#running-tests)
   - [Filename Conventions](#filename-conventions)
   - [Command Line Interface](#command-line-interface)
   - [Version Control Integration](#version-control-integration)
-  - [Writing Tests](#writing-tests)
+  - [Writing ListTests](#writing-tests)
   - [Testing Components](#testing-components)
   - [Using Third Party Assertion Libraries](#using-third-party-assertion-libraries)
   - [Initializing Test Environment](#initializing-test-environment)
-  - [Focusing and Excluding Tests](#focusing-and-excluding-tests)
+  - [Focusing and Excluding ListTests](#focusing-and-excluding-tests)
   - [Coverage Reporting](#coverage-reporting)
   - [Continuous Integration](#continuous-integration)
   - [Disabling jsdom](#disabling-jsdom)
   - [Snapshot Testing](#snapshot-testing)
   - [Editor Integration](#editor-integration)
-- [Debugging Tests](#debugging-tests)
-  - [Debugging Tests in Chrome](#debugging-tests-in-chrome)
-  - [Debugging Tests in Visual Studio Code](#debugging-tests-in-visual-studio-code)
+- [Debugging ListTests](#debugging-tests)
+  - [Debugging ListTests in Chrome](#debugging-tests-in-chrome)
+  - [Debugging ListTests in Visual Studio Code](#debugging-tests-in-visual-studio-code)
 - [Developing Components in Isolation](#developing-components-in-isolation)
   - [Getting Started with Storybook](#getting-started-with-storybook)
   - [Getting Started with Styleguidist](#getting-started-with-styleguidist)
@@ -1264,7 +1264,7 @@ Similarly to the previous section, you can leave some placeholders in the HTML t
 
 Then, on the server, you can replace `__SERVER_DATA__` with a JSON of real data right before sending the response. The client code can then read `window.SERVER_DATA` to use it. **Make sure to [sanitize the JSON before sending it to the client](https://medium.com/node-security/the-most-common-xss-vulnerability-in-react-js-applications-2bdffbcc1fa0) as it makes your app vulnerable to XSS attacks.**
 
-## Running Tests
+## Running ListTests
 
 >Note: this feature is available with `react-scripts@0.3.0` and higher.<br>
 >[Read the migration guide to learn how to enable it in older projects!](https://github.com/facebookincubator/create-react-app/blob/master/CHANGELOG.md#migrating-from-023-to-030)
@@ -1305,7 +1305,7 @@ Jest will always explicitly mention that it only ran tests related to the files 
 
 Jest will always run all tests on a [continuous integration](#continuous-integration) server or if the project is not inside a Git or Mercurial repository.
 
-### Writing Tests
+### Writing ListTests
 
 To create tests, add `it()` (or `test()`) blocks with the name of the test and its code. You may optionally wrap them in `describe()` blocks for logical grouping but this is neither required nor recommended.
 
@@ -1340,7 +1340,7 @@ it('renders without crashing', () => {
 });
 ```
 
-This test mounts a component and makes sure that it didn’t throw during rendering. Tests like this provide a lot of value with very little effort so they are great as a starting point, and this is the test you will find in `src/App.test.js`.
+This test mounts a component and makes sure that it didn’t throw during rendering. ListTests like this provide a lot of value with very little effort so they are great as a starting point, and this is the test you will find in `src/App.test.js`.
 
 When you encounter bugs caused by changing components, you will gain a deeper insight into which parts of them are worth testing in your application. This might be a good time to introduce more specific tests asserting specific expected output or behavior.
 
@@ -1510,7 +1510,7 @@ global.localStorage = localStorageMock
 >  }
 >  ```
 
-### Focusing and Excluding Tests
+### Focusing and Excluding ListTests
 
 You can replace `it()` with `xit()` to temporarily exclude a test from being executed.<br>
 Similarly, `fit()` lets you focus on a specific test without running any other tests.
@@ -1674,13 +1674,13 @@ If you use [Visual Studio Code](https://code.visualstudio.com), there is a [Jest
 
 ![VS Code Jest Preview](https://cloud.githubusercontent.com/assets/49038/20795349/a032308a-b7c8-11e6-9b34-7eeac781003f.png)
 
-## Debugging Tests
+## Debugging ListTests
 
 There are various ways to setup a debugger for your Jest tests. We cover debugging in Chrome and [Visual Studio Code](https://code.visualstudio.com/).
 
 >Note: debugging tests requires Node 8 or higher.
 
-### Debugging Tests in Chrome
+### Debugging ListTests in Chrome
 
 Add the following to the `scripts` section in your project's `package.json`
 ```json
@@ -1704,7 +1704,7 @@ After opening that link, the Chrome Developer Tools will be displayed. Select `i
 
 >Note: the --runInBand cli option makes sure Jest runs test in the same process rather than spawning processes for individual tests. Normally Jest parallelizes test runs across processes but it is hard to debug many processes at the same time.
 
-### Debugging Tests in Visual Studio Code
+### Debugging ListTests in Visual Studio Code
 
 Debugging Jest tests is supported out of the box for [Visual Studio Code](https://code.visualstudio.com).
 
@@ -1714,7 +1714,7 @@ Use the following [`launch.json`](https://code.visualstudio.com/docs/editor/debu
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Debug CRA Tests",
+      "name": "Debug CRA ListTests",
       "type": "node",
       "request": "launch",
       "runtimeExecutable": "${workspaceRoot}/node_modules/.bin/react-scripts",      

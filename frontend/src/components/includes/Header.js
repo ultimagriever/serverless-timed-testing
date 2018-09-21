@@ -11,6 +11,7 @@ import {
 } from 'reactstrap';
 import { Link } from 'react-router-dom';
 import { connect } from 'react-redux';
+import AdminLinks from './AdminLinks';
 
 class Header extends Component {
   state = {
@@ -34,11 +35,15 @@ class Header extends Component {
 
           <Collapse isOpen={this.state.isOpen} navbar>
             <Nav className="mr-auto" navbar>
-              <NavItem>
-                <NavLink tag={Link} to="/">
-                  Home
-                </NavLink>
-              </NavItem>
+              {
+                this.props.authenticated && this.props.user && AdminLinks.map(({ to, label }, index) => (
+                  <NavItem key={index}>
+                    <NavLink tag={Link} to={to}>
+                      {label}
+                    </NavLink>
+                  </NavItem>
+                ))
+              }
             </Nav>
 
             <Nav className="ml-auto" navbar>
@@ -55,4 +60,4 @@ class Header extends Component {
   }
 }
 
-export default connect(state => ({ authenticated: state.auth.authenticated }))(Header);
+export default connect(state => state.auth)(Header);

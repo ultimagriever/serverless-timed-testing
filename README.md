@@ -1,4 +1,4 @@
-# Serverless Timed Tests
+# Serverless Timed ListTests
 
 This is a tool for the creation and undergoing of multiple-choice tests
 that may or may not be time-limited.

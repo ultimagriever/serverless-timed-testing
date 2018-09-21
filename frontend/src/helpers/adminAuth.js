@@ -1,7 +1,7 @@
 import {setCognitoCredentials} from './idp';
 import { CognitoUserPool, AuthenticationDetails, CognitoUser } from 'amazon-cognito-identity-js';
 
-const config = {
+export const config = {
   pool: new CognitoUserPool({
     UserPoolId: process.env.REACT_APP_ADMIN_USER_POOL_ID,
     ClientId: process.env.REACT_APP_ADMIN_CLIENT_ID
