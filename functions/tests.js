@@ -1,6 +1,6 @@
 const AWS = require('aws-sdk');
 const uuid = require('uuid');
-const { addCorsHeader, extractUserGuid, parseDdbOutput } = require('./helpers');
+const { addCorsHeader, extractUserGuid, parseDdbItem } = require('./helpers');
 
 exports.get = async function(event) {
   const dynamodb = new AWS.DynamoDB();
@@ -48,11 +48,11 @@ exports.get = async function(event) {
     });
   }
 
-  const items = parseDdbOutput(result.Items);
+  const items = result.Items.map(parseDdbItem);
 
   return addCorsHeader({
     statusCode: 200,
-    body: JSON.stringify(items),
+    body: JSON.stringify(event.pathParameters ? items.pop() : items),
     headers: {
       "Content-Type": "application/json"
     }
@@ -90,14 +90,6 @@ exports.create = async function(event) {
   try {
     await dynamodb.putItem(params).promise();
 
-    console.log(addCorsHeader({
-      statusCode: 201,
-      body: id,
-      headers: {
-        'Content-Type': 'text/plain'
-      }
-    }));
-
     return addCorsHeader({
       statusCode: 201,
       body: id,
@@ -106,12 +98,67 @@ exports.create = async function(event) {
       }
     });
   } catch (err) {
+    console.error(err);
     return addCorsHeader({
       statusCode: 500,
       body: JSON.stringify("Internal Server Error"),
       headers: {
         'Content-Type': 'application/json'
       }
+    });
+  }
+};
+
+exports.update = async function(event) {
+  const dynamodb = new AWS.DynamoDB();
+  const body = JSON.parse(event.body);
+
+  const owner = extractUserGuid(event);
+
+  const params = {
+    TableName: process.env.DYNAMODB_TABLE,
+    Key: {
+      id: {
+        S: event.pathParameters.id
+      },
+      ownerId: {
+        S: owner
+      }
+    },
+    UpdateExpression: "SET #title = :title, #desc = :desc, #timeLimit = :timeLimit",
+    ExpressionAttributeNames: {
+      '#title': 'title',
+      '#desc': 'description',
+      '#timeLimit': 'timeLimit'
+    },
+    ExpressionAttributeValues: {
+      ':title': {
+        S: body.title
+      },
+      ':desc': {
+        S: body.description
+      },
+      ':timeLimit': {
+        S: body.timeLimit
+      }
+    }
+  };
+
+  try {
+    await dynamodb.updateItem(params).promise();
+
+    return addCorsHeader({
+      statusCode: 200,
+      body: event.pathParameters.id,
+      headers: {
+        'Content-Type': 'text/plain'
+      }
+    });
+  } catch (err) {
+    console.error(err);
+    return addCorsHeader({
+      statusCode: 500,
+      body: JSON.stringify({ message: 'Internal Server Error' })
     });
   }
 };

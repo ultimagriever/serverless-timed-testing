@@ -9,6 +9,7 @@ import StudentDashboard from '../components/student/Dashboard';
 import AdminDashboard from '../components/admin/Dashboard';
 import AdminTests from '../components/admin/tests/ListTests';
 import NewTest from '../components/admin/tests/NewTest';
+import EditTest from '../components/admin/tests/EditTest';
 
 const routes = [
   {
@@ -34,6 +35,10 @@ const routes = [
   {
     path: '/admin/tests/new',
     component: RequireAuth(NewTest)
+  },
+  {
+    path: '/admin/tests/:id/edit',
+    component: RequireAuth(EditTest)
   },
   {
     path: '/student/dashboard',

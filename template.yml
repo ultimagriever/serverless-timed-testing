@@ -286,6 +286,23 @@ Resources:
             Method: post
             Path: /tests
 
+  UpdateTest:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./functions
+      Handler: tests.update
+      Role: !GetAtt ExecutionRole.Arn
+      Environment:
+        Variables:
+          DYNAMODB_TABLE: !Ref TestsTable
+      Events:
+        Put:
+          Type: Api
+          Properties:
+            RestApiId: !Ref RestApi
+            Method: put
+            Path: /tests/{id}
+
   CreateStudent:
     Type: AWS::Serverless::Function
     Properties:
@@ -339,6 +356,8 @@ Resources:
       KeySchema:
         - AttributeName: id
           KeyType: HASH
+        - AttributeName: ownerId
+          KeyType: RANGE
       GlobalSecondaryIndexes:
         - IndexName: owner-index
           KeySchema:
@@ -429,6 +448,35 @@ Resources:
                 uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GetTests.Arn}/invocations
               x-amazon-apigateway-auth:
                 type: aws_iam
+            put:
+              summary: Updates existing test
+              description: Updates an existing test if the owner is the one performing the update
+              tags:
+                - Tests
+              responses:
+                "200":
+                  description: OK
+                "401":
+                  description: Unauthorized
+                "500":
+                  description: Internal Server Error
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                type: aws_proxy
+                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UpdateTest.Arn}/invocations
+              x-amazon-apigateway-auth:
+                type: aws_iam
+              parameters:
+                - in: path
+                  name: id
+                  description: The test's GUID
+                  type: string
+                  required: true
+                - in: body
+                  name: test
+                  description: The updated test information
+                  schema:
+                    $ref: "#/definitions/Test"
           /students:
             post:
               summary: Create a student to undertake created tests
