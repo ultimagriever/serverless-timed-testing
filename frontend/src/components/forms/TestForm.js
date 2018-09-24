@@ -31,7 +31,7 @@ class TestForm extends Component {
         />
         <FormGroup className="d-flex justify-content-center">
           <Button color="default" tag={Link} to="/admin/tests">
-            <i class="fa fa-chevron-left" /> Go back
+            <i className="fa fa-chevron-left" /> Go back
           </Button>
           <Button color="secondary" onClick={reset}>
             Reset

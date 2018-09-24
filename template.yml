@@ -400,10 +400,16 @@ Resources:
                   description: Created
                 "500":
                   description: Internal Server Error
+              parameters:
+                - in: body
+                  name: test
+                  description: The test to create
+                  schema:
+                    $ref: "#/definitions/Test"
               x-amazon-apigateway-integration:
                 httpMethod: POST
                 type: aws_proxy
-                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GetTests.Arn}/invocations
+                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CreateTest.Arn}/invocations
               x-amazon-apigateway-auth:
                 type: aws_iam
           /tests/{id}:
@@ -479,6 +485,19 @@ Resources:
                 httpMethod: POST
                 type: aws_proxy
                 uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AuthenticateStudent.Arn}/invocations
+        definitions:
+          Test:
+            type: object
+            required:
+              - title
+              - timeLimit
+            properties:
+              title:
+                type: string
+              timeLimit:
+                type: string
+              description:
+                type: string
 
 Outputs:
   AdminClientId:

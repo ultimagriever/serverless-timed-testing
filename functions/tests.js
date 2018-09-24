@@ -1,6 +1,6 @@
 const AWS = require('aws-sdk');
 const uuid = require('uuid');
-const { addCorsHeader, extractUserGuid } = require('./helpers');
+const { addCorsHeader, extractUserGuid, parseDdbOutput } = require('./helpers');
 
 exports.get = async function(event) {
   const dynamodb = new AWS.DynamoDB();
@@ -48,9 +48,11 @@ exports.get = async function(event) {
     });
   }
 
+  const items = parseDdbOutput(result.Items);
+
   return addCorsHeader({
     statusCode: 200,
-    body: JSON.stringify(result.Items),
+    body: JSON.stringify(items),
     headers: {
       "Content-Type": "application/json"
     }
@@ -59,7 +61,7 @@ exports.get = async function(event) {
 
 exports.create = async function(event) {
   const dynamodb = new AWS.DynamoDB();
-  const body = JSON.parse(body);
+  const body = JSON.parse(event.body);
   const id = uuid.v4();
 
   const owner = extractUserGuid(event);
@@ -87,6 +89,14 @@ exports.create = async function(event) {
 
   try {
     await dynamodb.putItem(params).promise();
+
+    console.log(addCorsHeader({
+      statusCode: 201,
+      body: id,
+      headers: {
+        'Content-Type': 'text/plain'
+      }
+    }));
 
     return addCorsHeader({
       statusCode: 201,

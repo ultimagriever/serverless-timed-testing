@@ -39,8 +39,9 @@ export function createTest(values) {
     });
 
     const request = signRequest({
-      method: 'GET',
-      path: '/tests'
+      method: 'POST',
+      path: '/tests',
+      body: values
     });
 
     try {

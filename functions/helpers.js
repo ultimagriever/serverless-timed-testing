@@ -19,3 +19,9 @@ exports.extractUserGuid = function(event) {
 
   return provider.split(':').pop();
 };
+
+exports.parseDdbOutput = items => items.map(
+  item => Object.keys(item).reduce(
+    (prev, curr) => Object.assign({}, prev, { [curr]: item[curr].S }), {}
+  )
+);
