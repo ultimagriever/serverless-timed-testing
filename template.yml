@@ -54,6 +54,7 @@ Resources:
                     - dynamodb:GetItem
                     - dynamodb:PutItem
                     - dynamodb:UpdateItem
+                    - dynamodb:DeleteItem
                   Resource: "*"
           - PolicyName: TextMessagePolicy
             PolicyDocument:
@@ -246,6 +247,48 @@ Resources:
               Forward: none
           ViewerProtocolPolicy: allow-all
 
+  CreateStudent:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./functions
+      Handler: auth.createUser
+      Role: !GetAtt ExecutionRole.Arn
+      Events:
+        CreateStudentPost:
+          Type: Api
+          Properties:
+            Method: post
+            Path: /students
+            RestApiId: !Ref RestApi
+
+  RequestOTP:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./functions
+      Handler: auth.generateCode
+      Role: !GetAtt ExecutionRole.Arn
+      Events:
+        RequestOTP:
+          Type: Api
+          Properties:
+            Method: post
+            Path: /students/request-otp
+            RestApiId: !Ref RestApi
+
+  AuthenticateStudent:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./functions
+      Handler: auth.authenticate
+      Role: !GetAtt ExecutionRole.Arn
+      Events:
+        Authenticate:
+          Type: Api
+          Properties:
+            Method: post
+            Path: /students/authenticate
+            RestApiId: !Ref RestApi
+
   GetTests:
     Type: AWS::Serverless::Function
     Properties:
@@ -303,47 +346,22 @@ Resources:
             Method: put
             Path: /tests/{id}
 
-  CreateStudent:
+  DeleteTest:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: ./functions
-      Handler: auth.createUser
+      Handler: tests.delete
       Role: !GetAtt ExecutionRole.Arn
+      Environment:
+        Variables:
+          DYNAMODB_TABLE: !Ref TestsTable
       Events:
-        CreateStudentPost:
+        Delete:
           Type: Api
           Properties:
-            Method: post
-            Path: /students
             RestApiId: !Ref RestApi
-
-  RequestOTP:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: ./functions
-      Handler: auth.generateCode
-      Role: !GetAtt ExecutionRole.Arn
-      Events:
-        RequestOTP:
-          Type: Api
-          Properties:
-            Method: post
-            Path: /students/request-otp
-            RestApiId: !Ref RestApi
-
-  AuthenticateStudent:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: ./functions
-      Handler: auth.authenticate
-      Role: !GetAtt ExecutionRole.Arn
-      Events:
-        Authenticate:
-          Type: Api
-          Properties:
-            Method: post
-            Path: /students/authenticate
-            RestApiId: !Ref RestApi
+            Method: delete
+            Path: /tests/{id}
 
   TestsTable:
     Type: AWS::DynamoDB::Table
@@ -477,6 +495,28 @@ Resources:
                   description: The updated test information
                   schema:
                     $ref: "#/definitions/Test"
+            delete:
+              summary: Deletes a specific test
+              description: Deletes an existing test if the owner is the one performing the deletion
+              tags:
+                - Tests
+              responses:
+                "200":
+                  description: OK
+                "500":
+                  description: Internal Server Error
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                type: aws_proxy
+                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DeleteTest.Arn}/invocations
+              x-amazon-apigateway-auth:
+                type: aws_iam
+              parameters:
+                - in: path
+                  name: id
+                  description: The test's GUID
+                  type: string
+                  required: true
           /students:
             post:
               summary: Create a student to undertake created tests

@@ -3,7 +3,7 @@ import { connect } from 'react-redux';
 import { compose } from 'redux';
 import { Table, Container, Button } from 'reactstrap';
 import { Link } from 'react-router-dom';
-import { getTests } from '../../../actions/testActions';
+import { getTests, deleteTest } from '../../../actions/testActions';
 import RequireAccessLevel from '../../../hoc/RequireAccessLevel';
 import Loading from '../../common/Loading';
 
@@ -12,7 +12,11 @@ class ListTests extends Component {
     this.props.getTests();
   }
 
-  deleteTest = async id => alert(id);
+  deleteTest = async id => {
+    if (window.confirm('Are you certain you wish to delete this test? This action cannot be reversed.')) {
+      await this.props.deleteTest(id);
+    }
+  };
 
   render() {
     if (this.props.loading) {
@@ -81,7 +85,7 @@ class ListTests extends Component {
 
 const enhance = compose(
   RequireAccessLevel('user'),
-  connect(state => ({ tests: state.tests.all, loading: state.tests.loading }), { getTests })
+  connect(state => ({ tests: state.tests.all, loading: state.tests.loading }), { getTests, deleteTest })
 );
 
 export default enhance(ListTests);

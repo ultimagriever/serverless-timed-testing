@@ -162,3 +162,35 @@ exports.update = async function(event) {
     });
   }
 };
+
+exports.delete = async function(event) {
+  const dynamodb = new AWS.DynamoDB();
+  const owner = extractUserGuid(event);
+
+  const params = {
+    TableName: process.env.DYNAMODB_TABLE,
+    Key: {
+      id: {
+        S: event.pathParameters.id
+      },
+      ownerId: {
+        S: owner
+      }
+    }
+  };
+
+  try {
+    await dynamodb.deleteItem(params).promise();
+
+    return addCorsHeader({
+      statusCode: 200,
+      body: JSON.stringify({ success: true })
+    });
+  } catch (err) {
+    console.error(err);
+    return addCorsHeader({
+      statusCode: 500,
+      body: JSON.stringify({ message: "Internal Server Error" })
+    });
+  }
+}

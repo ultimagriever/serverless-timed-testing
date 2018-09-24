@@ -109,3 +109,20 @@ export function updateTest({ id, ...values }) {
     }
   }
 }
+
+export function deleteTest(id) {
+  return async function (dispatch) {
+    const request = signRequest({
+      method: 'DELETE',
+      path: `/tests/${id}`
+    });
+
+    try {
+      await axios.delete(request.url, { headers: request.headers });
+
+      dispatch(getTests());
+    } catch (err) {
+      console.error(err);
+    }
+  }
+}
