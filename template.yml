@@ -363,6 +363,63 @@ Resources:
             Method: delete
             Path: /tests/{id}
 
+  GetDomains:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./functions
+      Handler: domains.get
+      Role: !GetAtt ExecutionRole.Arn
+      Environment:
+        Variables:
+          DYNAMODB_TABLE: !Ref DomainsTable
+      Events:
+        GetAllDomains:
+          Type: Api
+          Properties:
+            Method: get
+            Path: /tests/{id}/domains
+            RestApiId: !Ref RestApi
+        GetDomainById:
+          Type: Api
+          Properties:
+            Method: get
+            Path: /tests/{id}/domains/{domainId}
+            RestApiId: !Ref RestApi
+
+  CreateDomain:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./functions
+      Handler: domains.create
+      Role: !GetAtt ExecutionRole.Arn
+      Environment:
+        Variables:
+          DYNAMODB_TABLE: !Ref DomainsTable
+      Events:
+        CreateDomain:
+          Type: Api
+          Properties:
+            Method: post
+            Path: /tests/{id}/domains
+            RestApiId: !Ref RestApi
+
+  UpdateDomain:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./functions
+      Handler: domains.update
+      Role: !GetAtt ExecutionRole.Arn
+      Environment:
+        Variables:
+          DYNAMODB_TABLE: !Ref DomainsTable
+      Events:
+        UpdateDomain:
+          Type: Api
+          Properties:
+            Method: put
+            Path: /tests/{id}/domains/{domainId}
+            RestApiId: !Ref RestApi
+
   TestsTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -380,6 +437,35 @@ Resources:
         - IndexName: owner-index
           KeySchema:
             - AttributeName: ownerId
+              KeyType: HASH
+            - AttributeName: id
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+          ProvisionedThroughput:
+            ReadCapacityUnits: 5
+            WriteCapacityUnits: 1
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 1
+
+  DomainsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: testId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+        - AttributeName: testId
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: test-index
+          KeySchema:
+            - AttributeName: testId
               KeyType: HASH
             - AttributeName: id
               KeyType: RANGE
@@ -411,6 +497,8 @@ Resources:
             description: Attempt-related endpoints
           - name: Students
             description: Student-related endpoints
+          - name: Domains
+            description: Domain-related endpoints
         paths:
           /tests:
             get:
@@ -517,6 +605,110 @@ Resources:
                   description: The test's GUID
                   type: string
                   required: true
+          /tests/{id}/domains:
+            get:
+              summary: Fetches list of domains from test
+              description: Gets all knowledge domains pertaining to the test
+              tags:
+                - Tests
+                - Domains
+              responses:
+                "200":
+                  description: OK
+                "500":
+                  description: Internal Server Error
+              parameters:
+                - in: path
+                  name: id
+                  required: true
+                  type: string
+                  description: The test's GUID
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                type: aws_proxy
+                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GetDomains.Arn}/invocations
+              x-amazon-apigateway-auth:
+                type: aws_iam
+            post:
+              summary: Create a new domain for a test
+              description: Creates a new knowledge domain for an individual test
+              tags:
+                - Tests
+                - Domains
+              responses:
+                "201":
+                  description: Created
+                "500":
+                  description: Internal Server Error
+              parameters:
+                - in: path
+                  name: id
+                  required: true
+                  type: string
+                  description: The test's GUID
+                - in: body
+                  name: domain
+                  schema:
+                    $ref: "#/definitions/Domain"
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                type: aws_proxy
+                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CreateDomain.Arn}/invocations
+              x-amazon-apigateway-auth:
+                type: aws_iam
+          /tests/{id}/domains/{domainId}:
+            get:
+              summary: Gets a domain by its ID
+              description: Gets a domain by its ID, given that the test ID is correct
+              tags:
+                - Tests
+                - Domains
+              responses:
+                "200":
+                  description: OK
+                "404":
+                  description: Domain not found
+                "500":
+                  description: Internal Server Error
+              parameters:
+                - in: path
+                  name: id
+                  required: true
+                  type: string
+                  description: The test's GUID
+                - in: path
+                  name: domainId
+                  required: true
+                  type: string
+                  description: The domain's GUID
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                type: aws_proxy
+                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GetDomains.Arn}/invocations
+              x-amazon-apigateway-auth:
+                type: aws_iam
+            put:
+              summary: Updates an existing domain by its ID
+              description: Updates an existing domain by its ID, given the correct test ID
+              tags:
+                - Tests
+                - Domains
+              responses:
+                "200":
+                  description: OK
+                "500":
+                  description: Internal Server Error
+              parameters:
+                - in: path
+                  name: id
+                  required: true
+                  type: string
+                  description: The test's GUID
+                - in: path
+                  name: domainId
+                  required: true
+                  type: string
+                  description: The domain's 
           /students:
             post:
               summary: Create a student to undertake created tests
@@ -583,6 +775,15 @@ Resources:
               title:
                 type: string
               timeLimit:
+                type: string
+              description:
+                type: string
+          Domain:
+            type: object
+            required:
+              - title
+            properties:
+              title:
                 type: string
               description:
                 type: string

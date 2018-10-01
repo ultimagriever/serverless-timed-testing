@@ -10,6 +10,7 @@ import AdminDashboard from '../components/admin/Dashboard';
 import AdminTests from '../components/admin/tests/ListTests';
 import NewTest from '../components/admin/tests/NewTest';
 import EditTest from '../components/admin/tests/EditTest';
+import ViewTest from '../components/admin/tests/ViewTest';
 
 const routes = [
   {
@@ -39,6 +40,10 @@ const routes = [
   {
     path: '/admin/tests/:id/edit',
     component: RequireAuth(EditTest)
+  },
+  {
+    path: '/admin/tests/:id',
+    component: RequireAuth(ViewTest)
   },
   {
     path: '/student/dashboard',
