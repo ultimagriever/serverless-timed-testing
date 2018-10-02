@@ -420,6 +420,23 @@ Resources:
             Path: /tests/{id}/domains/{domainId}
             RestApiId: !Ref RestApi
 
+  DeleteDomain:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: domains.delete
+      CodeUri: ./functions
+      Role: !GetAtt ExecutionRole.Arn
+      Environment:
+        Variables:
+          DYNAMODB_TABLE: !Ref DomainsTable
+      Events:
+        DeleteDomain:
+          Type: Api
+          Properties:
+            Method: delete
+            Path: /tests/{id}/domains/{domainId}
+            RestApiId: !Ref RestApi
+
   TestsTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -708,7 +725,45 @@ Resources:
                   name: domainId
                   required: true
                   type: string
-                  description: The domain's 
+                  description: The domain's GUID
+                - in: body
+                  name: domain
+                  schema:
+                    $ref: "#/definitions/Domain"
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                type: aws_proxy
+                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UpdateDomain.Arn}/invocations
+              x-amazon-apigateway-auth:
+                type: aws_iam
+            delete:
+              summary: Deletes a domain given its ID and test ID
+              description: Deletes an existing domain by its ID, given the correct test ID
+              tags:
+                - Tests
+                - Domains
+              responses:
+                "204":
+                  description: No Content
+                "500":
+                  description: Internal Server Error
+              parameters:
+                - in: path
+                  name: id
+                  required: true
+                  type: string
+                  description: The test's GUID
+                - in: path
+                  name: domainId
+                  required: true
+                  type: string
+                  description: The domain's GUID
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                type: aws_proxy
+                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DeleteDomain.Arn}/invocations
+              x-amazon-apigateway-auth:
+                type: aws_iam
           /students:
             post:
               summary: Create a student to undertake created tests
@@ -745,7 +800,6 @@ Resources:
                 httpMethod: POST
                 type: aws_proxy
                 uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${RequestOTP.Arn}/invocations
-
           /students/authenticate:
             post:
               summary: Authenticate OTP against phone

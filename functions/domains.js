@@ -115,13 +115,13 @@ exports.update = async function(event) {
     UpdateExpression: "SET #title = :title, #desc = :desc",
     ExpressionAttributeNames: {
       "#title": "title",
-      "#description": "description"
+      "#desc": "description"
     },
     ExpressionAttributeValues: {
       ":title": {
         S: body.title
       },
-      ":description": {
+      ":desc": {
         S: body.description
       }
     }
@@ -136,6 +136,34 @@ exports.update = async function(event) {
       headers: {
         'Content-Type': 'text/plain'
       }
+    });
+  } catch (err) {
+    console.error(err);
+    return addCorsHeader({
+      statusCode: 500,
+      body: JSON.stringify({ message: "Internal Server Error" })
+    });
+  }
+};
+
+exports.delete = async function(event) {
+  const params = {
+    TableName: process.env.DYNAMODB_TABLE,
+    Key: {
+      id: {
+        S: event.pathParameters.domainId
+      },
+      testId: {
+        S: event.pathParameters.id
+      }
+    }
+  };
+
+  try {
+    await dynamodb.deleteItem(params).promise();
+
+    return addCorsHeader({
+      statusCode: 204
     });
   } catch (err) {
     console.error(err);
