@@ -2,9 +2,19 @@ import React, { Component } from 'react';
 import { connect } from 'react-redux';
 import { Table, Button } from 'reactstrap';
 import { Link } from 'react-router-dom';
+import { getDomains, deleteDomain } from '../../../../actions/domainActions';
+import Loading from '../../../common/Loading';
 
 class ListDomains extends Component {
-  deleteDomain = id => {}
+  componentWillMount() {
+    this.props.getDomains(this.props.testId);
+  }
+
+  deleteDomain = domainId => {
+    const { testId } = this.props;
+
+    this.props.deleteDomain({ testId, domainId });
+  };
 
   render() {
     return (
@@ -24,7 +34,7 @@ class ListDomains extends Component {
         {
           this.props.domains.length ? this.props.domains.map(domain => (
             <tr key={domain.id}>
-              <td>{domain.name}</td>
+              <td>{domain.title}</td>
               <td>{domain.description}</td>
               <td>
                 <Button color="link" tag={Link} to={`/admin/tests/${this.props.testId}/domains/${domain.id}/edit`}>
@@ -39,9 +49,20 @@ class ListDomains extends Component {
             </tr>
           )) : (
             <tr>
-              <td colSpan={4} className="text-center">
-                No domains found. Would you like to <Link to={`/admin/tests/${this.props.testId}/domains/new`}>create a new one</Link>?
-              </td>
+              {
+                this.props.loading ? (
+                  <td colSpan={4}>
+                    <Loading/>
+                  </td>
+                ) : (
+                  <td colSpan={4} className="text-center">
+                    No domains found. Would you like to&nbsp;
+                    <Link to={`/admin/tests/${this.props.testId}/domains/new`}>
+                      create a new one
+                    </Link>?
+                  </td>
+                )
+              }
             </tr>
           )
         }
@@ -51,4 +72,7 @@ class ListDomains extends Component {
   }
 }
 
-export default connect(state => ({ domains: state.domains.all, loading: state.domains.loading }))(ListDomains);
+export default connect(
+  state => ({ domains: state.domains.all, loading: state.domains.loading }),
+  { getDomains, deleteDomain }
+)(ListDomains);
