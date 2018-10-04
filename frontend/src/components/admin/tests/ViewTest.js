@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import { connect } from 'react-redux';
 import { compose } from 'redux';
 import { Link } from 'react-router-dom';
-import { Container, Row, Col, Nav, NavItem, NavLink, TabPane, TabContent } from 'reactstrap';
+import { Container, Nav, NavItem, NavLink, TabPane, TabContent } from 'reactstrap';
 import { getTestById } from '../../../actions/testActions';
 import Loading from '../../common/Loading';
 import RequireAccessLevel from '../../../hoc/RequireAccessLevel';

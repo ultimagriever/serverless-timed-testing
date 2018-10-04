@@ -11,12 +11,12 @@ exports.get = async function(event) {
 
   let params;
 
-  if (event.pathParameters.domainId) {
+  if (event.pathParameters.questionId) {
     params = Object.assign({}, scanParams, {
       KeyConditionExpression: "id = :id AND testId = :testId",
       ExpressionAttributeValues: {
         ":id": {
-          S: event.pathParameters.domainId
+          S: event.pathParameters.questionId
         },
         ":testId": {
           S: event.pathParameters.id
@@ -25,7 +25,7 @@ exports.get = async function(event) {
     });
   } else {
     params = Object.assign({}, scanParams, {
-      IndexName: 'test-index',
+      IndexName: 'test-domain-index',
       KeyConditionExpression: "testId = :id",
       ExpressionAttributeValues: {
         ":id": {
@@ -37,7 +37,7 @@ exports.get = async function(event) {
 
   const result = await dynamodb.query(params).promise();
 
-  if (event.pathParameters.domainId && !result.Items.length) {
+  if (event.pathParameters.questionId && !result.Items.length) {
     return addCorsHeader({
       statusCode: 404,
       body: JSON.stringify({ message: 'Not Found' }),
@@ -51,7 +51,7 @@ exports.get = async function(event) {
 
   return addCorsHeader({
     statusCode: 200,
-    body: JSON.stringify(event.pathParameters.domainId ? items.pop() : items),
+    body: JSON.stringify(event.pathParameters.questionId ? items.pop() : items),
     headers: {
       "Content-Type": "application/json"
     }
@@ -71,11 +71,17 @@ exports.create = async function(event) {
       testId: {
         S: event.pathParameters.id
       },
-      title: {
-        S: body.title
+      domainId: {
+        S: body.domainId
       },
-      description: {
-        S: body.description
+      stem: {
+        S: body.stem
+      },
+      answers: {
+        M: AWS.DynamoDB.Converter.marshall(body.answers)
+      },
+      correctAnswers: {
+        SS: body.correctAnswers
       }
     }
   };
@@ -96,7 +102,6 @@ exports.create = async function(event) {
       body: JSON.stringify({ message: "Internal Server Error" })
     });
   }
-
 };
 
 exports.update = async function(event) {
@@ -106,23 +111,31 @@ exports.update = async function(event) {
     TableName: process.env.DYNAMODB_TABLE,
     Key: {
       id: {
-        S: event.pathParameters.domainId
+        S: event.pathParameters.questionId
       },
       testId: {
         S: event.pathParameters.id
       }
     },
-    UpdateExpression: "SET #title = :title, #desc = :desc",
+    UpdateExpression: "SET #domain = :domain, #stem = :stem, #answers = :answers, #ca = :ca",
     ExpressionAttributeNames: {
-      "#title": "title",
-      "#desc": "description"
+      "#domain": "domainId",
+      "#stem": "stem",
+      "#answers": "answers",
+      "#ca": "correctAnswers"
     },
     ExpressionAttributeValues: {
-      ":title": {
-        S: body.title
+      ":domain": {
+        S: body.domainId
       },
-      ":desc": {
-        S: body.description
+      ":stem": {
+        S: body.stem
+      },
+      ":answers": {
+        M: AWS.DynamoDB.Converter.marshall(body.answers)
+      },
+      ":ca": {
+        SS: body.correctAnswers
       }
     }
   };
@@ -132,13 +145,12 @@ exports.update = async function(event) {
 
     return addCorsHeader({
       statusCode: 200,
-      body: event.pathParameters.domainId,
+      body: event.pathParameters.questionId,
       headers: {
         'Content-Type': 'text/plain'
       }
     });
   } catch (err) {
-    console.error(err);
     return addCorsHeader({
       statusCode: 500,
       body: JSON.stringify({ message: "Internal Server Error" })
@@ -151,7 +163,7 @@ exports.delete = async function(event) {
     TableName: process.env.DYNAMODB_TABLE,
     Key: {
       id: {
-        S: event.pathParameters.domainId
+        S: event.pathParameters.questionId
       },
       testId: {
         S: event.pathParameters.id
@@ -166,10 +178,9 @@ exports.delete = async function(event) {
       statusCode: 204
     });
   } catch (err) {
-    console.error(err);
     return addCorsHeader({
       statusCode: 500,
-      body: JSON.stringify({ message: "Internal Server Error" })
+      body: JSON.stringify({ message: 'Internal Server Error' })
     });
   }
 };

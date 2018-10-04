@@ -21,50 +21,50 @@ Parameters:
 
 Resources:
   ExecutionRole:
-      Type: AWS::IAM::Role
-      Properties:
-        AssumeRolePolicyDocument:
-          Version: 2012-10-17
-          Statement:
-            - Effect: Allow
-              Action:
-                - sts:AssumeRole
-              Principal:
-                Service:
-                  - lambda.amazonaws.com
-        Policies:
-          - PolicyName: LogPolicy
-            PolicyDocument:
-              Version: 2012-10-17
-              Statement:
-                - Effect: Allow
-                  Action:
-                    - logs:CreateLogGroup
-                    - logs:CreateLogStream
-                    - logs:PutLogEvents
-                  Resource: "*"
-          - PolicyName: DynamoDBPolicy
-            PolicyDocument:
-              Version: 2012-10-17
-              Statement:
-                - Effect: Allow
-                  Action:
-                    - dynamodb:Query
-                    - dynamodb:Scan
-                    - dynamodb:GetItem
-                    - dynamodb:PutItem
-                    - dynamodb:UpdateItem
-                    - dynamodb:DeleteItem
-                  Resource: "*"
-          - PolicyName: TextMessagePolicy
-            PolicyDocument:
-              Version: 2012-10-17
-              Statement:
-                - Effect: Allow
-                  Action:
-                    - sns:Publish
-                    - sns:SetSMSAttributes
-                  Resource: "*"
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - sts:AssumeRole
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+      Policies:
+        - PolicyName: LogPolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: "*"
+        - PolicyName: DynamoDBPolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:Query
+                  - dynamodb:Scan
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:DeleteItem
+                Resource: "*"
+        - PolicyName: TextMessagePolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sns:Publish
+                  - sns:SetSMSAttributes
+                Resource: "*"
 
   AdministratorRole:
     Type: AWS::IAM::Role
@@ -437,6 +437,80 @@ Resources:
             Path: /tests/{id}/domains/{domainId}
             RestApiId: !Ref RestApi
 
+  GetQuestions:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: questions.get
+      CodeUri: ./functions
+      Role: !GetAtt ExecutionRole.Arn
+      Environment:
+        Variables:
+          DYNAMODB_TABLE: !Ref QuestionsTable
+      Events:
+        GetQuestions:
+          Type: Api
+          Properties:
+            RestApiId: !Ref RestApi
+            Method: get
+            Path: /tests/{id}/questions
+        GetQuestionById:
+          Type: Api
+          Properties:
+            RestApiId: !Ref RestApi
+            Method: get
+            Path: /tests/{id}/questions/{questionId}
+
+  CreateQuestion:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./functions
+      Handler: questions.create
+      Role: !GetAtt ExecutionRole.Arn
+      Environment:
+        Variables:
+          DYNAMODB_TABLE: !Ref QuestionsTable
+      Events:
+        CreateDomain:
+          Type: Api
+          Properties:
+            Method: post
+            Path: /tests/{id}/questions
+            RestApiId: !Ref RestApi
+
+  UpdateQuestion:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./functions
+      Handler: questions.update
+      Role: !GetAtt ExecutionRole.Arn
+      Environment:
+        Variables:
+          DYNAMODB_TABLE: !Ref QuestionsTable
+      Events:
+        UpdateDomain:
+          Type: Api
+          Properties:
+            Method: put
+            Path: /tests/{id}/questions/{questionId}
+            RestApiId: !Ref RestApi
+
+  DeleteQuestion:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: questions.delete
+      CodeUri: ./functions
+      Role: !GetAtt ExecutionRole.Arn
+      Environment:
+        Variables:
+          DYNAMODB_TABLE: !Ref QuestionsTable
+      Events:
+        DeleteDomain:
+          Type: Api
+          Properties:
+            Method: delete
+            Path: /tests/{id}/questions/{questionId}
+            RestApiId: !Ref RestApi
+
   TestsTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -494,6 +568,37 @@ Resources:
       ProvisionedThroughput:
         ReadCapacityUnits: 5
         WriteCapacityUnits: 1
+
+  QuestionsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: testId
+          AttributeType: S
+        - AttributeName: domainId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+        - AttributeName: testId
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: test-domain-index
+          KeySchema:
+            - AttributeName: testId
+              KeyType: HASH
+            - AttributeName: domainId
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+          ProvisionedThroughput:
+            ReadCapacityUnits: 5
+            WriteCapacityUnits: 1
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
 
   RestApi:
     Type: AWS::Serverless::Api
@@ -764,6 +869,150 @@ Resources:
                 uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DeleteDomain.Arn}/invocations
               x-amazon-apigateway-auth:
                 type: aws_iam
+          /tests/{id}/questions:
+            get:
+              summary: Gets the test's questions
+              description: Fetches the test's questions with domain, stem, answers and distractors
+              tags:
+                - Tests
+                - Questions
+              responses:
+                "200":
+                  description: OK
+                "404":
+                  description: Not Found
+                "500":
+                  description: Internal Server Error
+              parameters:
+                - in: path
+                  name: id
+                  description: The test's GUID
+                  type: string
+                  required: true
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                type: aws_proxy
+                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GetQuestions.Arn}/invocations
+              x-amazon-apigateway-auth:
+                type: aws_iam
+            post:
+              summary: Creates a new multiple-choice question
+              description: Fetches a question, its choices for an answer and the correct alternatives
+              tags:
+                - Tests
+                - Questions
+              responses:
+                "201":
+                  description: Created
+                "500":
+                  description: Internal Server Error
+              parameters:
+                - in: path
+                  name: id
+                  description: The test's GUID
+                  type: string
+                  required: true
+                - in: body
+                  name: question
+                  schema:
+                    $ref: "#/definitions/Question"
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                type: aws_proxy
+                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CreateQuestion.Arn}/invocations
+              x-amazon-apigateway-auth:
+                type: aws_iam
+          /tests/{id}/questions/{questionId}:
+            get:
+              summary: Gets the test's questions
+              description: Fetches the test's questions with domain, stem, answers and distractors
+              tags:
+                - Tests
+                - Questions
+              responses:
+                "200":
+                  description: OK
+                "404":
+                  description: Not Found
+                "500":
+                  description: Internal Server Error
+              parameters:
+                - in: path
+                  name: id
+                  description: The test's GUID
+                  type: string
+                  required: true
+                - in: path
+                  name: questionId
+                  description: The question's GUID
+                  type: string
+                  required: true
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                type: aws_proxy
+                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GetQuestions.Arn}/invocations
+              x-amazon-apigateway-auth:
+                type: aws_iam
+            put:
+              summary: Updates a question
+              description: Updates a question, its answers, knowledge domain and/or correct alternatives
+              tags:
+                - Tests
+                - Questions
+              responses:
+                "200":
+                  description: OK
+                "500":
+                  description: Internal Server Error
+              parameters:
+                - in: path
+                  name: id
+                  description: The test's GUID
+                  type: string
+                  required: true
+                - in: path
+                  name: questionId
+                  description: The question's GUID
+                  type: string
+                  required: true
+                - in: body
+                  name: question
+                  schema:
+                    $ref: "#/definitions/Question"
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                type: aws_proxy
+                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UpdateQuestion.Arn}/invocations
+              x-amazon-apigateway-auth:
+                type: aws_iam
+            delete:
+              summary: Deletes a question
+              description: Deletes a question from a test
+              tags:
+                - Tests
+                - Questions
+              responses:
+                "204":
+                  description: No Content
+                "500":
+                  description: Internal Server Error
+              parameters:
+                - in: path
+                  name: id
+                  description: The test's GUID
+                  type: string
+                  required: true
+                - in: path
+                  name: questionId
+                  description: The question's GUID
+                  type: string
+                  required: true
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                type: aws_proxy
+                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DeleteQuestion.Arn}/invocations
+              x-amazon-apigateway-auth:
+                type: aws_iam
           /students:
             post:
               summary: Create a student to undertake created tests
@@ -840,6 +1089,22 @@ Resources:
               title:
                 type: string
               description:
+                type: string
+          Question:
+            type: object
+            required:
+              - domainId
+              - stem
+              - answers
+              - correctAnswers
+            properties:
+              domainId:
+                type: string
+              stem:
+                type: string
+              answers:
+                type: string
+              correctAnswers:
                 type: string
 
 Outputs:

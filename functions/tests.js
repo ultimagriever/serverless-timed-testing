@@ -1,6 +1,6 @@
 const AWS = require('aws-sdk');
 const uuid = require('uuid');
-const { addCorsHeader, extractUserGuid, parseDdbItem } = require('./helpers');
+const { addCorsHeader, extractUserGuid } = require('./helpers');
 
 exports.get = async function(event) {
   const dynamodb = new AWS.DynamoDB();
@@ -48,7 +48,7 @@ exports.get = async function(event) {
     });
   }
 
-  const items = result.Items.map(parseDdbItem);
+  const items = result.Items.map(AWS.DynamoDB.Converter.unmarshall);
 
   return addCorsHeader({
     statusCode: 200,
