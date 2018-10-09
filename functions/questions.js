@@ -4,6 +4,25 @@ const { addCorsHeader } = require('./helpers');
 
 const dynamodb = new AWS.DynamoDB();
 
+async function getDomain({ domainId, testId }) {
+  const params = {
+    TableName: process.env.DYNAMODB_DOMAIN_TABLE,
+    KeyConditionExpression: "id = :domainId AND testId = :testId",
+    ExpressionAttributeValues: {
+      ":domainId": {
+        S: domainId
+      },
+      ":testId":{
+        S: testId
+      }
+    }
+  };
+
+  const result = await dynamodb.query(params).promise();
+
+  return result.Items.pop();
+}
+
 exports.get = async function(event) {
   const scanParams = {
     TableName: process.env.DYNAMODB_TABLE
@@ -62,6 +81,11 @@ exports.create = async function(event) {
   const body = JSON.parse(event.body);
   const id = uuid.v4();
 
+  const domain = await getDomain({
+    domainId: body.domainId,
+    testId: event.pathParameters.id
+  });
+
   const params = {
     TableName: process.env.DYNAMODB_TABLE,
     Item: {
@@ -73,6 +97,9 @@ exports.create = async function(event) {
       },
       domainId: {
         S: body.domainId
+      },
+      domain: {
+        M: domain
       },
       stem: {
         S: body.stem
@@ -107,6 +134,11 @@ exports.create = async function(event) {
 exports.update = async function(event) {
   const body = JSON.parse(event.body);
 
+  const domain = await getDomain({
+    domainId: body.domainId,
+    testId: event.pathParameters.id
+  });
+
   const params = {
     TableName: process.env.DYNAMODB_TABLE,
     Key: {
@@ -117,16 +149,20 @@ exports.update = async function(event) {
         S: event.pathParameters.id
       }
     },
-    UpdateExpression: "SET #domain = :domain, #stem = :stem, #answers = :answers, #ca = :ca",
+    UpdateExpression: "SET #domainId = :domainId, #domain = :domain, #stem = :stem, #answers = :answers, #ca = :ca",
     ExpressionAttributeNames: {
-      "#domain": "domainId",
+      "#domain": "domain",
+      "#domainId": "domainId",
       "#stem": "stem",
       "#answers": "answers",
       "#ca": "correctAnswers"
     },
     ExpressionAttributeValues: {
-      ":domain": {
+      ":domainId": {
         S: body.domainId
+      },
+      ":domain": {
+        M: domain
       },
       ":stem": {
         S: body.stem
@@ -151,6 +187,7 @@ exports.update = async function(event) {
       }
     });
   } catch (err) {
+    console.error(err);
     return addCorsHeader({
       statusCode: 500,
       body: JSON.stringify({ message: "Internal Server Error" })

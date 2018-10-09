@@ -7,11 +7,12 @@ import { getTestById } from '../../../actions/testActions';
 import Loading from '../../common/Loading';
 import RequireAccessLevel from '../../../hoc/RequireAccessLevel';
 import ListDomains from './domains/ListDomains';
+import ListQuestions from './questions/ListQuestions';
 
 
 class ViewTest extends Component {
   state = {
-    activeTab: 'domains'
+    activeTab: localStorage.getItem('testActiveTab') || 'domains'
   };
 
   componentWillMount() {
@@ -20,7 +21,14 @@ class ViewTest extends Component {
     this.props.getTestById(id);
   }
 
-  toggleTab = tab => this.setState(() => ({ activeTab: tab }));
+  toggleTab = tab => {
+    this.setState(() => {
+      localStorage.setItem('testActiveTab', tab);
+      return {
+        activeTab: tab
+      };
+    });
+  };
 
   render() {
     if (this.props.loading || !this.props.test) {
@@ -65,7 +73,7 @@ class ViewTest extends Component {
           </TabPane>
           <TabPane tabId="questions">
             <Container className="mt-5">
-              <h3>TODO</h3>
+              <ListQuestions testId={this.props.match.params.id} />
             </Container>
           </TabPane>
         </TabContent>

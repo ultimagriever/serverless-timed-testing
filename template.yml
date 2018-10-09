@@ -469,6 +469,7 @@ Resources:
       Environment:
         Variables:
           DYNAMODB_TABLE: !Ref QuestionsTable
+          DYNAMODB_DOMAIN_TABLE: !Ref DomainsTable
       Events:
         CreateDomain:
           Type: Api
@@ -486,6 +487,7 @@ Resources:
       Environment:
         Variables:
           DYNAMODB_TABLE: !Ref QuestionsTable
+          DYNAMODB_DOMAIN_TABLE: !Ref DomainsTable
       Events:
         UpdateDomain:
           Type: Api

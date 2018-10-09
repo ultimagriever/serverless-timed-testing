@@ -4,6 +4,7 @@
   "private": true,
   "dependencies": {
     "@firebase/app-types": "0.x",
+    "alphabet": "^1.0.0",
     "amazon-cognito-identity-js": "^2.0.26",
     "aws-sdk": "^2.314.0",
     "axios": "^0.18.0",
@@ -22,6 +23,7 @@
     "react-router": "^4.3.1",
     "react-router-dom": "^4.3.1",
     "react-scripts": "1.1.5",
+    "react-select": "^2.1.0",
     "reactstrap": "^6.4.0",
     "redux": "^4.0.0",
     "redux-form": "^7.4.2",
