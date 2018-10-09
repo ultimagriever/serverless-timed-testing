@@ -14,6 +14,7 @@ import ViewTest from '../components/admin/tests/ViewTest';
 import NewDomain from '../components/admin/tests/domains/NewDomain';
 import EditDomain from '../components/admin/tests/domains/EditDomain';
 import NewQuestion from '../components/admin/tests/questions/NewQuestion';
+import EditQuestion from '../components/admin/tests/questions/EditQuestion';
 
 const routes = [
   {
@@ -59,6 +60,10 @@ const routes = [
   {
     path: '/admin/tests/:id/questions/new',
     component: RequireAuth(NewQuestion)
+  },
+  {
+    path: '/admin/tests/:id/questions/:questionId/edit',
+    component: RequireAuth(EditQuestion)
   },
   {
     path: '/student/dashboard',
