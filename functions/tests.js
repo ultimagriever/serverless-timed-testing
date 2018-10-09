@@ -83,6 +83,9 @@ exports.create = async function(event) {
       },
       ownerId: {
         S: owner
+      },
+      questionCount: {
+        N: body.questionCount
       }
     }
   };
@@ -125,11 +128,12 @@ exports.update = async function(event) {
         S: owner
       }
     },
-    UpdateExpression: "SET #title = :title, #desc = :desc, #timeLimit = :timeLimit",
+    UpdateExpression: "SET #title = :title, #desc = :desc, #timeLimit = :timeLimit, #qc = :qc",
     ExpressionAttributeNames: {
       '#title': 'title',
       '#desc': 'description',
-      '#timeLimit': 'timeLimit'
+      '#timeLimit': 'timeLimit',
+      '#qc': 'questionCount'
     },
     ExpressionAttributeValues: {
       ':title': {
@@ -140,6 +144,9 @@ exports.update = async function(event) {
       },
       ':timeLimit': {
         S: body.timeLimit
+      },
+      ':qc': {
+        N: body.questionCount
       }
     }
   };

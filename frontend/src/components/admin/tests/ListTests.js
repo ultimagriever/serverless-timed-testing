@@ -38,6 +38,9 @@ class ListTests extends Component {
               <th>
                 Time Limit
               </th>
+              <th>
+                # of Questions
+              </th>
               <th colSpan={3} className="text-center">
                 <Button color="primary" tag={Link} to="/admin/tests/new">
                   Create Test <i className="fa fa-plus-circle" />
@@ -52,6 +55,7 @@ class ListTests extends Component {
                 <td>{test.title}</td>
                 <td>{test.description}</td>
                 <td>{test.timeLimit}</td>
+                <td>{test.questionCount}</td>
                 <td>
                   <Button color="link" tag={Link} to={`/admin/tests/${test.id}`}>
                     <i className="fa fa-search" />

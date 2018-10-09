@@ -29,6 +29,12 @@ class TestForm extends Component {
           label="Time limit"
           placeholder="15 minutes = 15:00"
         />
+        <Field
+          name="questionCount"
+          component={TextInput}
+          label="# of Questions"
+          placeholder="e.g. 20"
+        />
         <FormGroup className="d-flex justify-content-center">
           <Button color="default" tag={Link} to="/admin/tests">
             <i className="fa fa-chevron-left" /> Go back
