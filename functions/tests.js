@@ -2,8 +2,9 @@ const AWS = require('aws-sdk');
 const uuid = require('uuid');
 const { addCorsHeader, extractUserGuid } = require('./helpers');
 
+const dynamodb = new AWS.DynamoDB();
+
 exports.get = async function(event) {
-  const dynamodb = new AWS.DynamoDB();
 
   const scanParams = {
     TableName: process.env.DYNAMODB_TABLE
@@ -60,7 +61,6 @@ exports.get = async function(event) {
 };
 
 exports.create = async function(event) {
-  const dynamodb = new AWS.DynamoDB();
   const body = JSON.parse(event.body);
   const id = uuid.v4();
 
@@ -113,7 +113,6 @@ exports.create = async function(event) {
 };
 
 exports.update = async function(event) {
-  const dynamodb = new AWS.DynamoDB();
   const body = JSON.parse(event.body);
 
   const owner = extractUserGuid(event);
@@ -171,14 +170,14 @@ exports.update = async function(event) {
 };
 
 exports.delete = async function(event) {
-  const dynamodb = new AWS.DynamoDB();
   const owner = extractUserGuid(event);
+  const testId = event.pathParameters.id
 
   const params = {
     TableName: process.env.DYNAMODB_TABLE,
     Key: {
       id: {
-        S: event.pathParameters.id
+        S: testId
       },
       ownerId: {
         S: owner
@@ -187,6 +186,17 @@ exports.delete = async function(event) {
   };
 
   try {
+    await cascadeDelete({
+      TableName: process.env.DYNAMODB_DOMAIN_TABLE,
+      IndexName: 'test-index',
+      testId
+    });
+    await cascadeDelete({
+      TableName: process.env.DYNAMODB_QUESTION_TABLE,
+      IndexName: 'test-domain-index',
+      testId
+    });
+
     await dynamodb.deleteItem(params).promise();
 
     return addCorsHeader({
@@ -200,4 +210,36 @@ exports.delete = async function(event) {
       body: JSON.stringify({ message: "Internal Server Error" })
     });
   }
+};
+
+async function cascadeDelete({ TableName, IndexName, testId }) {
+  const records = await dynamodb.query({
+    TableName,
+    IndexName,
+    KeyConditionExpression: "testId = :testId",
+    ExpressionAttributeValues: {
+      ":testId": {
+        S: testId
+      }
+    }
+  }).promise();
+
+  const batchRequest = {
+    RequestItems: {
+      [TableName]: records.Items.map(record => ({
+        DeleteRequest: {
+          Key: {
+            id: {
+              S: record.id.S
+            },
+            testId: {
+              S: testId
+            }
+          }
+        }
+      }))
+    }
+  };
+
+  await dynamodb.batchWriteItem(batchRequest).promise();
 }

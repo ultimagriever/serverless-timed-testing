@@ -55,6 +55,7 @@ Resources:
                   - dynamodb:PutItem
                   - dynamodb:UpdateItem
                   - dynamodb:DeleteItem
+                  - dynamodb:BatchWriteItem
                 Resource: "*"
         - PolicyName: TextMessagePolicy
           PolicyDocument:
@@ -355,6 +356,8 @@ Resources:
       Environment:
         Variables:
           DYNAMODB_TABLE: !Ref TestsTable
+          DYNAMODB_DOMAIN_TABLE: !Ref DomainsTable
+          DYNAMODB_QUESTION_TABLE: !Ref QuestionsTable
       Events:
         Delete:
           Type: Api
