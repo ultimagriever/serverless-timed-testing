@@ -254,12 +254,72 @@ Resources:
       CodeUri: ./functions
       Handler: auth.createUser
       Role: !GetAtt ExecutionRole.Arn
+      Environment:
+        Variables:
+          DYNAMODB_TEST_TABLE: !Ref TestsTable
       Events:
         CreateStudentPost:
           Type: Api
           Properties:
             Method: post
-            Path: /students
+            Path: /tests/{id}/students
+            RestApiId: !Ref RestApi
+
+  UpdateStudent:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./functions
+      Handler: auth.updateUser
+      Role: !GetAtt ExecutionRole.Arn
+      Environment:
+        Variables:
+          DYNAMODB_TEST_TABLE: !Ref TestsTable
+      Events:
+        CreateStudentPost:
+          Type: Api
+          Properties:
+            Method: put
+            Path: /tests/{id}/students/{uid}
+            RestApiId: !Ref RestApi
+
+  DeleteStudent:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./functions
+      Handler: auth.deleteUser
+      Role: !GetAtt ExecutionRole.Arn
+      Environment:
+        Variables:
+          DYNAMODB_TEST_TABLE: !Ref TestsTable
+      Events:
+        CreateStudentPost:
+          Type: Api
+          Properties:
+            Method: delete
+            Path: /tests/{id}/students/{uid}
+            RestApiId: !Ref RestApi
+
+  GetStudents:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./functions
+      Handler: auth.getUsers
+      Role: !GetAtt ExecutionRole.Arn
+      Environment:
+        Variables:
+          DYNAMODB_TESTS_TABLE: !Ref TestsTable
+      Events:
+        GetAllStudents:
+          Type: Api
+          Properties:
+            Method: get
+            Path: /tests/{id}/students
+            RestApiId: !Ref RestApi
+        GetStudentByUid:
+          Type: Api
+          Properties:
+            Method: get
+            Path: /tests/{id}/students/{uid}
             RestApiId: !Ref RestApi
 
   RequestOTP:
@@ -1018,7 +1078,28 @@ Resources:
                 uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DeleteQuestion.Arn}/invocations
               x-amazon-apigateway-auth:
                 type: aws_iam
-          /students:
+          /tests/{id}/students:
+            get:
+              summary: Fetches students by test
+              description: Fetches all students associated with a test
+              tags:
+                - Students
+              responses:
+                "200":
+                  description: OK
+                "500":
+                  description: Internal Server Error
+              parameters:
+                - in: path
+                  name: id
+                  type: string
+                  description: The test ID to filter out students
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                type: aws_proxy
+                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GetStudents.Arn}/invocations
+              x-amazon-apigateway-auth:
+                type: aws_iam
             post:
               summary: Create a student to undertake created tests
               description: Creates new student in Firebase Auth
@@ -1031,10 +1112,99 @@ Resources:
                   description: Unprocessable Entity
                 "500":
                   description: Internal Server Error
+              parameters:
+                - in: body
+                  name: student
+                  schema:
+                    $ref: "#/definitions/Student"
               x-amazon-apigateway-integration:
                 httpMethod: POST
                 type: aws_proxy
                 uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CreateStudent.Arn}/invocations
+              x-amazon-apigateway-auth:
+                type: aws_iam
+          /tests/{id}/students/{uid}:
+            get:
+              summary: Fetch student by UID
+              description: Fetches a student user record from Firebase by its UID
+              tags:
+                - Students
+              responses:
+                "200":
+                  description: OK
+                "404":
+                  description: Student not found
+                "500":
+                  description: Internal Server Error
+              parameters:
+                - in: path
+                  name: uid
+                  required: true
+                  type: string
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                type: aws_proxy
+                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GetStudents.Arn}/invocations
+              x-amazon-apigateway-auth:
+                type: aws_iam
+            put:
+              summary: Updates a student info
+              description: Updates a student's info, such as e-mail and display name
+              tags:
+                - Tests
+                - Students
+              responses:
+                "200":
+                  description: OK
+                "500":
+                  description: Internal Server Error
+              parameters:
+                - in: path
+                  name: id
+                  description: The test's GUID
+                  type: string
+                  required: true
+                - in: path
+                  name: uid
+                  description: The student's user ID
+                  type: string
+                  required: true
+                - in: body
+                  name: student
+                  schema:
+                    $ref: "#/definitions/Student"
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                type: aws_proxy
+                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UpdateStudent.Arn}/invocations
+              x-amazon-apigateway-auth:
+                type: aws_iam
+            delete:
+              summary: Deletes a student from a test
+              description: Deletes a student from a test
+              tags:
+                - Tests
+                - Students
+              responses:
+                "204":
+                  description: No Content
+                "500":
+                  description: Internal Server Error
+              parameters:
+                - in: path
+                  name: id
+                  description: The test's GUID
+                  type: string
+                  required: true
+                - in: path
+                  name: uid
+                  description: The student's user ID
+                  type: string
+                  required: true
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                type: aws_proxy
+                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DeleteStudent.Arn}/invocations
               x-amazon-apigateway-auth:
                 type: aws_iam
           /students/request-otp:
@@ -1110,6 +1280,15 @@ Resources:
               answers:
                 type: string
               correctAnswers:
+                type: string
+          Student:
+            type: object
+            required:
+              - email
+            properties:
+              email:
+                type: string
+              displayName:
                 type: string
 
 Outputs:

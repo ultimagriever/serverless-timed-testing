@@ -2,7 +2,7 @@ const admin = require('firebase-admin');
 const AWS = require('aws-sdk');
 const moment = require('moment');
 const serviceAccount = require('./serviceAccountKey.json');
-const { addCorsHeader } = require('./helpers');
+const { addCorsHeader, extractUserGuid } = require('./helpers');
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
@@ -10,6 +10,69 @@ admin.initializeApp({
 });
 
 const parsePhone = phone => String(phone).replace(/\D+/g, '');
+
+const dynamodb = new AWS.DynamoDB();
+
+async function fetchTest(event) {
+  const testId = event.pathParameters.id;
+  const ownerId = extractUserGuid(event);
+
+  const result = await dynamodb.query({
+    TableName: process.env.DYNAMODB_TEST_TABLE,
+    KeyConditionExpression: "id = :testId AND ownerId = :ownerId",
+    ExpressionAttributeValues: {
+      ':testId': {
+        S: testId
+      },
+      ':ownerId': {
+        S: ownerId
+      }
+    },
+    ProjectionExpression: "enrolledStudents"
+  }).promise();
+
+  return AWS.DynamoDB.Converter.unmarshall(result.Items.pop());
+}
+
+exports.getUsers = async function(event) {
+  if (event.pathParameters.uid) {
+    const user = await admin.auth().getUser(event.pathParameters.uid);
+
+    if (user) {
+      return addCorsHeader({
+        statusCode: 200,
+        body: JSON.stringify(user.toJSON())
+      });
+    }
+
+    return addCorsHeader({
+      statusCode: 404,
+      body: 'Not Found',
+      headers: {
+        'Content-Type': 'text/plain'
+      }
+    });
+  }
+
+  const test = await fetchTest(event);
+
+  if (!test.enrolledStudents) {
+    return addCorsHeader({
+      statusCode: 200,
+      body: "[]",
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+  }
+
+  const userPromises = test.enrolledStudents.values.map(async uid => (await admin.auth().getUser(uid)).toJSON());
+
+  return addCorsHeader({
+    statusCode: 200,
+    body: JSON.stringify(await Promise.all(userPromises))
+  });
+};
 
 exports.createUser = async function(event) {
   const body = JSON.parse(event.body);
@@ -27,17 +90,124 @@ exports.createUser = async function(event) {
 
   try {
     const user = await admin.auth().createUser({
-      uid: phone
+      uid: phone,
+      email: body.email,
+      displayName: body.displayName
     });
 
+    if (user) {
+      const test = await fetchTest(event);
+
+      await dynamodb.updateItem({
+        TableName: process.env.DYNAMODB_TEST_TABLE,
+        Key: {
+          id: {
+            S: testId
+          },
+          ownerId: {
+            S: ownerId
+          }
+        },
+        UpdateExpression: "SET enrolledStudents = :enrolledStudents",
+        ExpressionAttributeValues: {
+          ':enrolledStudents': {
+            SS: test.enrolledStudents ? [...test.enrolledStudents.values, user.uid] : [user.uid]
+          }
+        }
+      }).promise();
+
+      return addCorsHeader({
+        statusCode: 201,
+        body: JSON.stringify(user)
+      });
+    }
+
     return addCorsHeader({
-      statusCode: 201,
-      body: JSON.stringify(user)
+      statusCode: 422,
+      body: JSON.stringify({
+        error: "Unprocessable Entity"
+      })
     });
   } catch (error) {
     return addCorsHeader({
       statusCode: 500,
       body: JSON.stringify(error)
+    });
+  }
+};
+
+exports.updateUser = async function(event) {
+  const body = JSON.parse(event.body);
+
+  const uid = event.pathParameters.uid;
+
+  try {
+    const userExists = await admin.auth().getUser(uid);
+
+    if (!userExists) {
+      return addCorsHeader({
+        statusCode: 404,
+        body: 'Not Found',
+        headers: {
+          'Content-Type': 'text/plain'
+        }
+      });
+    }
+
+    const user = await admin.auth().updateUser(uid, {
+      email: body.email,
+      displayName: body.displayName
+    });
+
+    return addCorsHeader({
+      statusCode: 200,
+      body: JSON.stringify(user.toJSON())
+    });
+  } catch (e) {
+    return addCorsHeader({
+      statusCode: 500,
+      body: JSON.stringify({ message: "Internal Server Error" })
+    })
+  }
+};
+
+exports.deleteUser = async function(event) {
+  const uid = event.pathParameters.uid;
+  const testId = event.pathParameters.id;
+  const ownerId = extractUserGuid(event);
+
+  try {
+    const test = await fetchTest(event);
+
+    const index = test.enrolledStudents.values.findIndex(id => id === uid);
+
+    await dynamodb.updateItem({
+      TableName: process.env.DYNAMODB_TEST_TABLE,
+      Key: {
+        id: {
+          S: testId
+        },
+        ownerId: {
+          S: ownerId
+        }
+      },
+      UpdateExpression: "SET enrolledStudents = :enrolledStudents",
+      ExpressionAttributeValues: {
+        ":enrolledStudents": {
+          SS: [...test.enrolledStudents.values.slice(0, index), ...test.enrolledStudents.values.slice(index + 1)]
+        }
+      }
+    }).promise();
+
+    return addCorsHeader({
+      statusCode: 204
+    });
+  } catch (e) {
+    return addCorsHeader({
+      statusCode: 500,
+      body: JSON.stringify({
+        message: "Internal Server Error"
+      })
     });
   }
 };
@@ -120,7 +290,7 @@ exports.authenticate = async function(event) {
       };
     }
 
-    if (moment().valueOf() > moment(row.iat).add(10, 'minute')) {
+    if (moment().valueOf() > moment(row.iat).add(5, 'minute')) {
       return addCorsHeader({
         statusCode: 401,
         body: JSON.stringify({

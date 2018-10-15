@@ -224,22 +224,24 @@ async function cascadeDelete({ TableName, IndexName, testId }) {
     }
   }).promise();
 
-  const batchRequest = {
-    RequestItems: {
-      [TableName]: records.Items.map(record => ({
-        DeleteRequest: {
-          Key: {
-            id: {
-              S: record.id.S
-            },
-            testId: {
-              S: testId
+  if (records.Items.length) {
+    const batchRequest = {
+      RequestItems: {
+        [TableName]: records.Items.map(record => ({
+          DeleteRequest: {
+            Key: {
+              id: {
+                S: record.id.S
+              },
+              testId: {
+                S: testId
+              }
             }
           }
-        }
-      }))
-    }
-  };
+        }))
+      }
+    };
 
-  await dynamodb.batchWriteItem(batchRequest).promise();
+    await dynamodb.batchWriteItem(batchRequest).promise();
+  }
 }

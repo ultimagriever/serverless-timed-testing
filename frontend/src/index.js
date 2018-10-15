@@ -7,11 +7,12 @@ import ReduxThunk from 'redux-thunk';
 import firebase from 'firebase/app';
 import App from './components/App';
 import reducers from './reducers';
+import refreshCredentialsMiddleware from './middleware/refreshCredentials';
 import './styles/css/index.css';
 import { signInCurrentStudent } from './actions/studentAuthActions';
 import { getSignedInAdmin } from './actions/adminAuthActions';
 
-const store = createStore(reducers, {}, applyMiddleware(ReduxThunk));
+const store = createStore(reducers, {}, applyMiddleware(ReduxThunk, refreshCredentialsMiddleware));
 
 firebase.initializeApp({
   apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
